@@ -1,19 +1,20 @@
-import * as core from '@actions/core'
-import {wait} from './wait'
+import { getInput, setFailed } from '@actions/core';
+import { load, dump } from 'js-yaml';
+import { context, getOctokit } from '@actions/github';
 
 async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
-    core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
-
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    core.setOutput('time', new Date().toTimeString())
+    const version = getInput('version');
+    const previousVersion = getInput('previous_version');
+    const stage = getInput('stage');
+    const token = getInput('token');
+    const octokit = getOctokit(token);
+    // git log --oneline commit1...commit2 --merges
+    const commits = (await octokit.rest.repos.compareCommits({ owner: context.repo.owner, repo: context.repo.repo, base: previousVersion ?? '', head: version })).data;
+    const issues = await octokit.rest.search.issuesAndPullRequests({q: ''})
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) setFailed(error.message);
   }
 }
 
-run()
+run();
