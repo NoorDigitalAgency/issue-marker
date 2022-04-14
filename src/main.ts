@@ -9,7 +9,7 @@ async function run(): Promise<void> {
     const stage = getInput('stage');
     const token = getInput('token');
     const octokit = getOctokit(token);
-    // git log --oneline commit1...commit2 --merges
+    // git log --oneline --merges commit1...commit2 | grep 'Merge pull request #'
     const commits = (await octokit.rest.repos.compareCommits({ owner: context.repo.owner, repo: context.repo.repo, base: previousVersion ?? '', head: version })).data;
     const issues = await octokit.rest.search.issuesAndPullRequests({q: ''})
   } catch (error) {
