@@ -10,6 +10,7 @@ async function run(): Promise<void> {
     const token = getInput('token');
     const octokit = getOctokit(token);
     // git log --oneline --merges commit1...commit2 | grep 'Merge pull request #'
+    // https://github.com/NoorDigitalAgency/lightning-test/issues/11
     const commits = (await octokit.rest.repos.compareCommits({ owner: context.repo.owner, repo: context.repo.repo, base: previousVersion ?? '', head: version })).data;
     const issues = await octokit.rest.search.issuesAndPullRequests({q: ''})
   } catch (error) {
