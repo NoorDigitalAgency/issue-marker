@@ -9,9 +9,38 @@ async function run(): Promise<void> {
     const stage = getInput('stage');
     const token = getInput('token');
     const octokit = getOctokit(token);
-    // git log --oneline --merges commit1...commit2 | grep 'Merge pull request #'
-    // https://github.com/NoorDigitalAgency/lightning-test/issues/11
-    const commits = (await octokit.rest.repos.compareCommits({ owner: context.repo.owner, repo: context.repo.repo, base: previousVersion ?? '', head: version })).data;
+    // git fetch --all
+    // If previous version is present
+    // git log v1.6.0..v1.7.0 --reverse --merges --oneline --grep='Merge pull request #'
+    // If no previous version is present
+    // git log v1.7.0 --reverse --merges --oneline --grep='Merge pull request #'
+    /*
+query {
+  resource(url: "https://github.com/NoorDigitalAgency/startup-debug/pull/25") {
+    ... on PullRequest {
+      closingIssuesReferences(first: 100) {
+        nodes {
+          number
+        }
+      }
+    }
+  }
+}
+
+{
+  "data": {
+    "resource": {
+      "closingIssuesReferences": {
+        "nodes": [
+          {
+            "number": 35
+          }
+        ]
+      }
+    }
+  }
+}
+    */
     const issues = await octokit.rest.search.issuesAndPullRequests({q: ''})
   } catch (error) {
     if (error instanceof Error) setFailed(error.message);
