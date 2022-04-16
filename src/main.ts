@@ -14,6 +14,8 @@ async function run(): Promise<void> {
     // git log v1.6.0..v1.7.0 --reverse --merges --oneline --grep='Merge pull request #'
     // If no previous version is present
     // git log v1.7.0 --reverse --merges --oneline --grep='Merge pull request #'
+    // All the commits
+    // git log v1.6.0...v1.7.0 --reverse --merges --oneline
     /*
 query {
   resource(url: "https://github.com/NoorDigitalAgency/startup-debug/pull/25") {
