@@ -10,6 +10,7 @@ jobs:
     steps:
       - uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.PAT }}
           script: |
               function wait(milliseconds) {
                 return new Promise((resolve) => setTimeout(resolve, milliseconds));
