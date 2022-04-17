@@ -12,7 +12,7 @@ async function run(): Promise<void> {
     const token = getInput('token');
     const octokit = getOctokit(token);
     await exec('git', ['fetch', '--all']);
-    await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` : version, '--reverse', '--merges', '--oneline', '--no-abbrev',  `--grep='Merge pull request #'`]);
+    await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` : version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
     octokit.graphql('');
     // All the commits
     // git log v1.6.0...v1.7.0 --reverse --merges --oneline
