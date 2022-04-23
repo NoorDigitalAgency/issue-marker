@@ -11,7 +11,7 @@ async function run(): Promise<void> {
     if (!regex.test(version)) throw new Error(`Invalid Version '${version}'.`);
     const previousVersion = getInput('previous_version');
     if (!regex.test(previousVersion)) throw new Error(`Invalid Previous Version '${version}'.`);
-    const versionStage = getInput('stage');
+    const versionStage = regex.exec(version)!.groups!.stage;
     const token = getInput('token');
     const octokit = getOctokit(token);
     await exec('git', ['fetch', '--all']);
