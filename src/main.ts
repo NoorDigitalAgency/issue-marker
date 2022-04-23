@@ -6,9 +6,12 @@ import { EOL } from 'os';
 
 async function run(): Promise<void> {
   try {
+    const regex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}(?<stage>-alpha\.\d{1,3}|-beta\.\d{1,3}|)$/;
     const version = getInput('version');
+    if (!regex.test(version)) throw new Error(`Invalid Version '${version}'.`);
     const previousVersion = getInput('previous_version');
-    const stage = getInput('stage');
+    if (!regex.test(previousVersion)) throw new Error(`Invalid Previous Version '${version}'.`);
+    const versionStage = getInput('stage');
     const token = getInput('token');
     const octokit = getOctokit(token);
     await exec('git', ['fetch', '--all']);
