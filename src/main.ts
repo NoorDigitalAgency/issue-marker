@@ -1,10 +1,10 @@
 import { debug, endGroup, getInput, startGroup, warning } from '@actions/core';
 import { exec, getExecOutput } from '@actions/exec';
-import { load, dump } from 'js-yaml';
 import { context, getOctokit } from '@actions/github';
 import { EOL } from 'os';
 import { inspect } from 'util';
-import type { QueryData, PullRequest, Issue, Label } from './types';
+import { getIssueMetadata } from './functions';
+import type { QueryData, PullRequest, Issue } from './types';
 
 async function run(): Promise<void> {
 
@@ -46,11 +46,15 @@ async function run(): Promise<void> {
 
     const octokit = getOctokit(token);
 
+    const issues = new Array<{id: string; body: string; labels: Array<string>}>();
+
     if (stage === 'alpha') {
 
       await exec('git', ['fetch', '--all']);
 
-      const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` : version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
+      const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
+      
+        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
 
       if (logOutput.exitCode !== 0) throw new Error(logOutput.stderr);
 
@@ -66,7 +70,7 @@ async function run(): Promise<void> {
 
       if (merges.length === 0) throw new Error('No merges found.');
 
-      const pullRequests = new Array<PullRequest>();
+      let pullRequests = new Array<PullRequest>();
 
       for (const merge of merges) {
 
@@ -93,6 +97,8 @@ async function run(): Promise<void> {
                     closed
 
                     number
+
+                    id
 
                     labels(first: 100) {
 
@@ -124,84 +130,58 @@ async function run(): Promise<void> {
         pullRequests.push(pullRequest);
       }
 
-      pullRequests.filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0).map(pullRequest => pullRequest);
+      startGroup('Pull requests');
+
+      debug('Loaded pull requests:');
+
+      debug(inspect(pullRequests));
+
+      pullRequests = pullRequests.map(pullRequest => ({...pullRequest, issues: {nodes: pullRequest.issues.nodes.filter(issue => !issue.closed &&
+          
+        issue.labels.nodes.every(label => ['alpha', 'beta', 'production'].every(stageLabel => label.name !== stageLabel)))}}))
+        
+        .filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0);
+
+      debug('Filtered pull requests:');
+
+      debug(inspect(pullRequests));
+
+      endGroup();
+
+      const hashIssues = pullRequests.map(pullRequest => ({hash: merges.filter(merge => merge.number === pullRequest.number).pop()!.hash, issues: pullRequest.issues.nodes}))
+        
+        .flatMap(hashIssue => hashIssue.issues.map(issue => ({hash: hashIssue.hash, issue: issue})));
+
+      for (const hashIssue of hashIssues) {
+        
+        issues.push({id: hashIssue.issue.id, ...getIssueMetadata(stage, hashIssue.issue.labels.nodes.map(label => label.name), hashIssue.issue.body, hashIssue.hash, `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}`)});
+      }
+
+    } else if (stage === 'production' || stage === 'beta') {
+
+      // git branch -r --contains <commit> // get branches which contain the commit
+
+      const issue = (await octokit.rest.search.issuesAndPullRequests({q: ''})).data.items[0];
+
+      // TODO: Should we label based on the branches regardless of the stage?
+
+      // TODO: Check if hash exists on the stage's branch then
+
+      const body = issue.body ?? '';
+
+      const id = issue.node_id;
+
+      const labels = issue.labels.map(label => label.name ?? '').filter(label => label !== '');
+
+      issues.push({id, ...getIssueMetadata(stage, labels, body)});
 
     } else {
 
-
+      throw new Error(`Ivalid stage '${stage}'.`);
     }
 
-    // All the commits
-    // git log v1.6.0...v1.7.0 --reverse --merges --oneline
-    // git branch -r --contains <commit> // get branches which contain the commit
-    /*
-
-
-{
-  "owner": "NoorDigitalAgency",
-  "name": "startup-debug",
-  "numaber": 25
-}
-
-{
-  "data": {
-    "repository": {
-      "pullRequest": {
-        "number": 10,
-        "title": "sync: master to development",
-        "closed": true,
-        "issues": {
-          "nodes": [
-            {
-              "body": "### Describe this feature's value\n<!--A clear and concise description of what the feature is and how it is going to add value to the project.-->\nThe recruiter should be able to ask the candidate to provide a video presentation on the candidate board.\n\n\n### Describe the Solution\n\n\n### Additional Context\n<!-- Add any other context or screenshots about the feature request here. -->\n\n\n### DoD\n- \n\n### How should be tested?\n\n\n",
-              "closed": false,
-              "number": 593,
-              "labels": {
-                "nodes": [
-                  {
-                    "name": "enhancement"
-                  }
-                ]
-              }
-            },
-            {
-              "body": "### Describe this feature's value\n<!--A clear and concise description of what the feature is and how it is going to add value to the project.-->\nThe recruiter should be able to provide the candidate with a case study on the candidate board.\n\n\n### Describe the Solution\n\n\n### Additional Context\n<!-- Add any other context or screenshots about the feature request here. -->\n\n\n### DoD\n- \n\n### How should be tested?\n\n\n\n\n\n### Describe the Solution\n\n\n### Additional Context\n<!-- Add any other context or screenshots about the feature request here. -->\n\n\n### DoD\n- \n\n### How should be tested?\n\n\n",
-              "closed": false,
-              "number": 594,
-              "labels": {
-                "nodes": [
-                  {
-                    "name": "enhancement"
-                  }
-                ]
-              }
-            },
-            {
-              "body": "### Describe this feature's value\n<!--A clear and concise description of what the feature is and how it is going to add value to the project.-->\nAfter the release of the UI, we have to make sure that the users are using the latest UI version.\n\n\n### Describe the Solution\n\n\n### Additional Context\n<!-- Add any other context or screenshots about the feature request here. -->\n\n\n### DoD\n- \n\n### How should be tested?\n\n\n",
-              "closed": false,
-              "number": 642,
-              "labels": {
-                "nodes": [
-                  {
-                    "name": "enhancement"
-                  },
-                  {
-                    "name": "needs confirmation"
-                  },
-                  {
-                    "name": "Epic"
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-    */
-    const issues = await octokit.rest.search.issuesAndPullRequests({q: ''})
+    // TODO: Update the issues
+    // TODO: Investigate ZenHub's API
 
   } catch (error) {
 

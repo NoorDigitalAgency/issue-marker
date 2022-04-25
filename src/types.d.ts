@@ -6,6 +6,7 @@ export type Issue = {
   body: string;
   closed: boolean;
   number: number;
+  id: string;
   labels: {
     nodes: Array<Label>;
   };
