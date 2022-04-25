@@ -161,6 +161,20 @@ async function run(): Promise<void> {
 
       // git branch -r --contains <commit> // get branches which contain the commit
 
+/*
+office-ledigajobb-ui % git branch -r --contains 138fd2d23288da5009852a40ce104478656f4c49
+  origin/HEAD -> origin/develop
+  origin/copy-posting
+  origin/develop
+  origin/disabled-external-connections
+  origin/main
+  origin/manual-orders
+  origin/release
+  origin/translations
+  origin/update-beta-tester-data
+  origin/update-beta-tester-data-2
+*/
+
       const issue = (await octokit.rest.search.issuesAndPullRequests({q: ''})).data.items[0];
 
       // TODO: Should we label based on the branches regardless of the stage?
