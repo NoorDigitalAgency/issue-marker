@@ -9,6 +9,12 @@ export type Issue = {
   labels: {
     nodes: Array<Label>;
   };
+  repository: {
+    owner: {
+      login: string;
+    };
+    name: string;
+  };
 };
 
 export type PullRequest = {

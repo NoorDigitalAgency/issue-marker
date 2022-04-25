@@ -3,6 +3,7 @@ import { exec, getExecOutput } from '@actions/exec';
 import { load, dump } from 'js-yaml';
 import { context, getOctokit } from '@actions/github';
 import { EOL } from 'os';
+import { inspect } from 'util';
 import type { QueryData, PullRequest, Issue, Label } from './types';
 
 async function run(): Promise<void> {
@@ -72,18 +73,31 @@ async function run(): Promise<void> {
         const { pullRequest } = (await octokit.graphql<QueryData>(
           `
           query PullRequestIssues($owner: String!, $name: String!, $number: Int!) {
+
             repository(name: $name, owner: $owner) {
+
               pullRequest(number: $number) {
+
                 number
+
                 title
+
                 closed
+
                 issues: closingIssuesReferences(userLinkedOnly: true, first: 100) {
+
                   nodes {
+
                     body
+
                     closed
+
                     number
+
                     labels(first: 100) {
+
                       nodes {
+
                         name
                       }
                     }
@@ -109,6 +123,8 @@ async function run(): Promise<void> {
 
         pullRequests.push(pullRequest);
       }
+
+      pullRequests.filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0).map(pullRequest => pullRequest);
 
     } else {
 
@@ -186,7 +202,15 @@ async function run(): Promise<void> {
 }
     */
     const issues = await octokit.rest.search.issuesAndPullRequests({q: ''})
+
   } catch (error) {
+
+    startGroup('Error');
+
+    debug(inspect(error));
+
+    endGroup();
+
     if (error instanceof Error) warning(error.message);
   }
 }
