@@ -21,6 +21,8 @@ async function run(): Promise<void> {
 
     const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
 
+    const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
+
     const version = getInput('version', {required: true});
 
     debug(`Version: '${version}'.`);
@@ -207,7 +209,14 @@ async function run(): Promise<void> {
       throw new Error(`Ivalid stage '${stage}'.`);
     }
 
-    // TODO: Update the issues
+    // TODO: Error handling
+
+    for (const issue of issues) {
+
+      const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
+
+      await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels});
+    }
 
   } catch (error) {
 
