@@ -1,36 +1,31 @@
-export type Label = {
-  name: string;
+export type PullRequest = {
+  number: number;
+  title: string;
+  closed: boolean;
+  issues: Nodes<Issue>;
 };
 
 export type Issue = {
   body: string;
   closed: boolean;
   number: number;
-  id: string;
-  labels: {
-    nodes: Array<Label>;
-  };
-  repository: {
-    owner: {
-      login: string;
-    };
-    name: string;
-  };
+  repository: Repository;
+  labels: Nodes<Label>;
 };
 
-export type PullRequest = {
-  number: number;
-  title: string;
-  closed: boolean;
-  issues: {
-    nodes: Array<Issue>;
-  };
+export type Repository = {
+  name: string;
+  owner: Owner;
+}
+
+export type Owner = {
+  login: string;
+}
+
+export type Label = {
+  name: string;
 };
 
-export type QueryData = {
-  data: {
-    repository: {
-      pullRequest: PullRequest;
-    };
-  };
-};
+export type Nodes<T> = {
+  nodes: Array<T>;
+}

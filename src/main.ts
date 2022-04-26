@@ -4,7 +4,7 @@ import { context, getOctokit } from '@actions/github';
 import { EOL } from 'os';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
-import type { QueryData, PullRequest, Issue } from './types';
+import type { PullRequest } from './types';
 
 async function run(): Promise<void> {
 
@@ -53,7 +53,7 @@ async function run(): Promise<void> {
       await exec('git', ['fetch', '--all']);
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
-      
+
         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
 
       if (logOutput.exitCode !== 0) throw new Error(logOutput.stderr);
@@ -74,7 +74,7 @@ async function run(): Promise<void> {
 
       for (const merge of merges) {
 
-        const { pullRequest } = (await octokit.graphql<QueryData>(
+        const { pullRequest } = (await octokit.graphql<{data:{repository:{pullRequest: PullRequest}}}>(
           `
           query PullRequestIssues($owner: String!, $name: String!, $number: Int!) {
 
@@ -98,7 +98,15 @@ async function run(): Promise<void> {
 
                     number
 
-                    id
+                    repository {
+
+                      name
+
+                      owner {
+
+                        login
+                      }
+                    }
 
                     labels(first: 100) {
 
@@ -137,9 +145,9 @@ async function run(): Promise<void> {
       debug(inspect(pullRequests));
 
       pullRequests = pullRequests.map(pullRequest => ({...pullRequest, issues: {nodes: pullRequest.issues.nodes.filter(issue => !issue.closed &&
-          
+
         issue.labels.nodes.every(label => ['alpha', 'beta', 'production'].every(stageLabel => label.name !== stageLabel)))}}))
-        
+
         .filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0);
 
       debug('Filtered pull requests:');
@@ -149,12 +157,12 @@ async function run(): Promise<void> {
       endGroup();
 
       const hashIssues = pullRequests.map(pullRequest => ({hash: merges.filter(merge => merge.number === pullRequest.number).pop()!.hash, issues: pullRequest.issues.nodes}))
-        
+
         .flatMap(hashIssue => hashIssue.issues.map(issue => ({hash: hashIssue.hash, issue: issue})));
 
       for (const hashIssue of hashIssues) {
-        
-        issues.push({id: hashIssue.issue.id, ...getIssueMetadata(stage, hashIssue.issue.labels.nodes.map(label => label.name), hashIssue.issue.body, hashIssue.hash, `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}`)});
+
+        issues.push({id: `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}#${hashIssue.issue.number}`, ...getIssueMetadata(stage, hashIssue.issue.labels.nodes.map(label => label.name), hashIssue.issue.body, hashIssue.hash, `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}`)});
       }
 
     } else if (stage === 'production' || stage === 'beta') {
