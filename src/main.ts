@@ -208,7 +208,6 @@ async function run(): Promise<void> {
     }
 
     // TODO: Update the issues
-    // TODO: Investigate ZenHub's API
 
   } catch (error) {
 
