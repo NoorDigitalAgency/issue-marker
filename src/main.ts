@@ -29,7 +29,7 @@ async function run(): Promise<void> {
 
     if ([productionRegex, betaRegex, alphaRegex].every(regex => !regex.test(version))) throw new Error(`Invalid Version '${version}'.`);
 
-    const previousVersion = getInput('previous_version');
+    const previousVersion = getInput('previous-version');
 
     debug(`Previous Version: '${previousVersion}'.`);
 
@@ -143,11 +143,11 @@ async function run(): Promise<void> {
         pullRequests.push(pullRequest);
       }
 
-      startGroup('Pull requests');
-
-      debug('Loaded pull requests:');
+      startGroup('Loaded pull requests');
 
       debug(inspect(pullRequests));
+
+      endGroup();
 
       pullRequests = pullRequests.map(pullRequest => ({...pullRequest, issues: {nodes: pullRequest.issues.nodes.filter(issue => !issue.closed &&
 
@@ -155,23 +155,23 @@ async function run(): Promise<void> {
 
         .filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0);
 
-      debug('Filtered pull requests:');
+      startGroup('Filtered pull requests');
 
       debug(inspect(pullRequests));
 
       endGroup();
 
-      const hashIssues = pullRequests.map(pullRequest => ({hash: merges.filter(merge => merge.number === pullRequest.number).pop()!.hash, issues: pullRequest.issues.nodes}))
+      const commitIssues = pullRequests.map(pullRequest => ({hash: merges.filter(merge => merge.number === pullRequest.number).pop()!.hash, issues: pullRequest.issues.nodes}))
 
-        .flatMap(hashIssue => hashIssue.issues.map(issue => ({hash: hashIssue.hash, issue: issue})));
+        .flatMap(commitIssue => commitIssue.issues.map(issue => ({hash: commitIssue.hash, issue: issue})));
 
-      for (const hashIssue of hashIssues) {
+      for (const commitIssue of commitIssues) {
 
-        issues.push({id: `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}#${hashIssue.issue.number}`,
+        issues.push({id: `${commitIssue.issue.repository.owner}/${commitIssue.issue.repository.name}#${commitIssue.issue.number}`,
 
-          ...getIssueMetadata({stage, body: hashIssue.issue.body, commit: hashIssue.hash, labels: hashIssue.issue.labels.nodes.map(label => label.name),
+          ...getIssueMetadata({stage, body: commitIssue.issue.body, commit: commitIssue.hash, labels: commitIssue.issue.labels.nodes.map(label => label.name),
 
-            repository: `${hashIssue.issue.repository.owner.login}/${hashIssue.issue.repository.name}`, version})});
+            repository: `${commitIssue.issue.repository.owner.login}/${commitIssue.issue.repository.name}`, version})});
       }
 
     } else if (stage === 'production' || stage === 'beta') {
@@ -187,7 +187,7 @@ async function run(): Promise<void> {
 
         const { repository } = issue.url.match(issueRegex)!.groups!;
 
-        const {body, commit, labels} = {...getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version})};
+        const {body, commit, labels} = getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version});
 
         const branchesOutput = await getExecOutput('git', ['branch', '-r', '--contains', commit]);
 
@@ -204,18 +204,36 @@ async function run(): Promise<void> {
         if ([...branches.matchAll(branchRegex)].map(branch => branch.groups!.branch).includes(currentBranch)) issues.push({id: `${repository}#${issue.number}`, body, labels});
       }
 
-    } else {
-
-      throw new Error(`Ivalid stage '${stage}'.`);
     }
 
-    // TODO: Error handling
+    if (issues.length === 0) throw new Error('No issues to mark.');
+    
+    startGroup('Issues');
+
+    debug(inspect(issues));
+
+    endGroup();
 
     for (const issue of issues) {
 
-      const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
+      try {
 
-      await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels});
+        const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
+
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels});
+
+      } catch (error) {
+
+        startGroup('Issue Update Error');
+
+        debug(inspect(issue));
+
+        debug(inspect(error));
+
+        endGroup();
+
+        if (error instanceof Error) warning(error.message);
+      }
     }
 
   } catch (error) {

@@ -1,11 +1,17 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Issue Marker'
+description: 'Mark an issue which has been merged into a stage'
+author: 'Rojan Gh.'
 inputs:
-  milliseconds: # change this
-    required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    token:
+      required: true
+      description: Token
+    version:
+      required: true
+      description: Release Version
+    previous-version:
+      required: false
+      description: Previous Release Version
+      default: ''
 runs:
   using: 'node16'
   main: 'dist/index.js'
