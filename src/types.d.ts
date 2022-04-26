@@ -1,31 +1,44 @@
-export type PullRequest = {
+export interface PullRequest {
   number: number;
   title: string;
   closed: boolean;
   issues: Nodes<Issue>;
-};
+}
 
-export type Issue = {
+export interface Issue {
   body: string;
   closed: boolean;
   number: number;
   repository: Repository;
   labels: Nodes<Label>;
-};
+}
 
-export type Repository = {
+export interface Repository {
   name: string;
   owner: Owner;
 }
 
-export type Owner = {
+export interface Owner {
   login: string;
 }
 
-export type Label = {
+export interface Label {
   name: string;
-};
+}
 
-export type Nodes<T> = {
+export interface Nodes<T> {
   nodes: Array<T>;
+}
+
+export interface Metadata {
+  application: string;
+  repository: string;
+  commit: string;
+  version: string;
+  history: Array<History>;
+}
+
+export interface History {
+  commit: string;
+  version: string;
 }

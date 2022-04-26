@@ -1,7 +1,6 @@
 import { debug, endGroup, getInput, startGroup, warning } from '@actions/core';
 import { exec, getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
-import { EOL } from 'os';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
 import type { PullRequest } from './types';
@@ -10,13 +9,17 @@ async function run(): Promise<void> {
 
   try {
 
-    const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/i;
+    const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
 
-    const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/i;
+    const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/;
 
-    const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/i;
+    const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
 
     const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/m;
+
+    const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
+
+    const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
 
     const version = getInput('version', {required: true});
 
@@ -162,40 +165,42 @@ async function run(): Promise<void> {
 
       for (const hashIssue of hashIssues) {
 
-        issues.push({id: `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}#${hashIssue.issue.number}`, ...getIssueMetadata(stage, hashIssue.issue.labels.nodes.map(label => label.name), hashIssue.issue.body, hashIssue.hash, `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}`)});
+        issues.push({id: `${hashIssue.issue.repository.owner}/${hashIssue.issue.repository.name}#${hashIssue.issue.number}`,
+
+          ...getIssueMetadata({stage, body: hashIssue.issue.body, commit: hashIssue.hash, labels: hashIssue.issue.labels.nodes.map(label => label.name),
+
+            repository: `${hashIssue.issue.repository.owner.login}/${hashIssue.issue.repository.name}`, version})});
       }
 
     } else if (stage === 'production' || stage === 'beta') {
 
-      // git branch -r --contains <commit> // get branches which contain the commit
+      const currentBranch = stage === 'production' ? 'main' : 'release';
 
-/*
-office-ledigajobb-ui % git branch -r --contains 138fd2d23288da5009852a40ce104478656f4c49
-  origin/HEAD -> origin/develop
-  origin/copy-posting
-  origin/develop
-  origin/disabled-external-connections
-  origin/main
-  origin/manual-orders
-  origin/release
-  origin/translations
-  origin/update-beta-tester-data
-  origin/update-beta-tester-data-2
-*/
+      await exec('git', ['fetch', '--all']);
 
-      const issue = (await octokit.rest.search.issuesAndPullRequests({q: ''})).data.items[0];
+      // TODO: Query
+      const items = (await octokit.rest.search.issuesAndPullRequests({q: ''})).data.items;
 
-      // TODO: Should we label based on the branches regardless of the stage?
+      for (const issue of items) {
 
-      // TODO: Check if hash exists on the stage's branch then
+        const { repository } = issue.url.match(issueRegex)!.groups!;
 
-      const body = issue.body ?? '';
+        const {body, commit, labels} = {...getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version})};
 
-      const id = issue.node_id;
+        const branchesOutput = await getExecOutput('git', ['branch', '-r', '--contains', commit]);
 
-      const labels = issue.labels.map(label => label.name ?? '').filter(label => label !== '');
+        if (branchesOutput.exitCode !== 0) throw new Error(branchesOutput.stderr);
 
-      issues.push({id, ...getIssueMetadata(stage, labels, body)});
+        const branches = branchesOutput.stdout;
+
+        startGroup('Branches Output');
+
+        debug(branches);
+
+        endGroup();
+
+        if ([...branches.matchAll(branchRegex)].map(branch => branch.groups!.branch).includes(currentBranch)) issues.push({id: `${repository}#${issue.number}`, body, labels});
+      }
 
     } else {
 
