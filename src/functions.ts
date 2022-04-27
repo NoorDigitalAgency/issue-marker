@@ -7,7 +7,7 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
 
     const { stage, labels, body } = {...configuration};
 
-    const metadataYaml = (body ?? '').match(regex)?.groups?.details;
+    const metadataYaml = (body ?? '').match(regex)?.groups?.yaml;
 
     if (stage !== 'alpha' && !metadataYaml) {
 

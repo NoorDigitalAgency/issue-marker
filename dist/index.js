@@ -13,7 +13,7 @@ function getIssueMetadata(configuration) {
     var _a, _b, _c, _d;
     const regex = /\s+(?:<!--.*?-->\s*)?<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>(?:\s*<!--.*?-->)?\s+/ims;
     const { stage, labels, body } = Object.assign({}, configuration);
-    const metadataYaml = (_b = (_a = (body !== null && body !== void 0 ? body : '').match(regex)) === null || _a === void 0 ? void 0 : _a.groups) === null || _b === void 0 ? void 0 : _b.details;
+    const metadataYaml = (_b = (_a = (body !== null && body !== void 0 ? body : '').match(regex)) === null || _a === void 0 ? void 0 : _a.groups) === null || _b === void 0 ? void 0 : _b.yaml;
     if (stage !== 'alpha' && !metadataYaml) {
         throw new Error();
     }
