@@ -1,5 +1,5 @@
 import { debug, endGroup, getInput, startGroup, warning } from '@actions/core';
-import { exec, getExecOutput } from '@actions/exec';
+import { getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
@@ -56,10 +56,6 @@ async function run(): Promise<void> {
     const issues = new Array<{id: string; body: string; labels: Array<string>}>();
 
     if (stage === 'alpha') {
-
-      // git fetch --prune --unshallow --tags --all
-
-      // await exec('git', ['fetch', '--all']);
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
@@ -136,8 +132,6 @@ async function run(): Promise<void> {
     } else if (stage === 'production' || stage === 'beta') {
 
       const currentBranch = stage === 'production' ? 'main' : 'release';
-
-      await exec('git', ['fetch', '--prune', '--unshallow', '--tags', '--all']);
 
       const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
