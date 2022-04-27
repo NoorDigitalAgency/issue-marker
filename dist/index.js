@@ -125,6 +125,7 @@ function run() {
                 const currentBranch = stage === 'production' ? 'main' : 'release';
                 const filterLabel = stage === 'production' ? 'beta' : 'alpha';
                 const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body linked:pr label:${filterLabel}`)}`;
+                (0, core_1.debug)(`Query: '${query}'`);
                 const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
                 for (const issue of items) {
                     const { repository } = issue.url.match(issueRegex).groups;
