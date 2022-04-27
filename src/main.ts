@@ -180,6 +180,8 @@ async function run(): Promise<void> {
 
       await exec('git', ['fetch', '--all']);
 
+      const queryString = 'q=' + encodeURIComponent('GitHub Octocat in:readme user:defunkt');
+
       // TODO: Query
       const items = (await octokit.rest.search.issuesAndPullRequests({q: ''})).data.items;
 
