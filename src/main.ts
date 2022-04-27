@@ -57,7 +57,9 @@ async function run(): Promise<void> {
 
     if (stage === 'alpha') {
 
-      await exec('git', ['fetch', '--all']);
+      // git fetch --prune --unshallow --tags --all
+
+      await exec('git', ['fetch', '--prune', '--unshallow', '--tags', '--all']);
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
@@ -135,7 +137,7 @@ async function run(): Promise<void> {
 
       const currentBranch = stage === 'production' ? 'main' : 'release';
 
-      await exec('git', ['fetch', '--all']);
+      await exec('git', ['fetch', '--prune', '--unshallow', '--tags', '--all']);
 
       const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
