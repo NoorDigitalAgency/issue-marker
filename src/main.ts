@@ -141,6 +141,12 @@ async function run(): Promise<void> {
 
       const items = (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 
+      startGroup('Query Items');
+
+      debug(inspect(items));
+
+      endGroup();
+
       for (const issue of items) {
 
         const { repository } = issue.url.match(issueRegex)!.groups!;

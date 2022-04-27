@@ -127,6 +127,9 @@ function run() {
                 const query = encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`);
                 (0, core_1.debug)(`Query: ${query}`);
                 const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+                (0, core_1.startGroup)('Query Items');
+                (0, core_1.debug)((0, util_1.inspect)(items));
+                (0, core_1.endGroup)();
                 for (const issue of items) {
                     const { repository } = issue.url.match(issueRegex).groups;
                     const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_d = issue.body) !== null && _d !== void 0 ? _d : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version });
