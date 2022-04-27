@@ -180,10 +180,11 @@ async function run(): Promise<void> {
 
       await exec('git', ['fetch', '--all']);
 
-      const queryString = 'q=' + encodeURIComponent('GitHub Octocat in:readme user:defunkt');
+      const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
-      // TODO: Query
-      const items = (await octokit.rest.search.issuesAndPullRequests({q: ''})).data.items;
+      const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body linked:pr label:${filterLabel}`)}`;
+
+      const items = (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 
       for (const issue of items) {
 

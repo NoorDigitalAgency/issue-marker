@@ -11,7 +11,7 @@ exports.getIssueMetadata = void 0;
 const js_yaml_1 = __nccwpck_require__(1917);
 function getIssueMetadata(configuration) {
     var _a, _b;
-    const regex = /\s+<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>\s+/ms;
+    const regex = /\s+(?:<!--.*?-->\s*)?<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>(?:\s*<!--.*?-->)?\s+/ims;
     const { stage, labels, body } = Object.assign({}, configuration);
     const metadataYaml = (_b = (_a = (body !== null && body !== void 0 ? body : '').match(regex)) === null || _a === void 0 ? void 0 : _a.groups) === null || _b === void 0 ? void 0 : _b.details;
     if (stage !== 'alpha' && !metadataYaml) {
@@ -19,11 +19,14 @@ function getIssueMetadata(configuration) {
     }
     const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [{ commit: configuration.commit, version: configuration.version }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
     const metadata = { application: 'issue-marker', repository, commit, version, history };
-    const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body !== null && body !== void 0 ? body : ''}\n\n${(0, js_yaml_1.dump)(metadata, { forceQuotes: true, quotingType: "'" })}\n\n`;
+    const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body !== null && body !== void 0 ? body : ''}\n\n${summerizeMetadata((0, js_yaml_1.dump)(metadata, { forceQuotes: true, quotingType: "'" }))}\n\n`;
     const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
     return { body: outputBody, labels: outputLabels, commit };
 }
 exports.getIssueMetadata = getIssueMetadata;
+function summerizeMetadata(metadata) {
+    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT--><details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n${metadata}\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
+}
 
 
 /***/ }),
@@ -166,8 +169,9 @@ function run() {
             else if (stage === 'production' || stage === 'beta') {
                 const currentBranch = stage === 'production' ? 'main' : 'release';
                 yield (0, exec_1.exec)('git', ['fetch', '--all']);
-                // TODO: Query
-                const items = (yield octokit.rest.search.issuesAndPullRequests({ q: '' })).data.items;
+                const filterLabel = stage === 'production' ? 'beta' : 'alpha';
+                const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body linked:pr label:${filterLabel}`)}`;
+                const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
                 for (const issue of items) {
                     const { repository } = issue.url.match(issueRegex).groups;
                     const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_b = issue.body) !== null && _b !== void 0 ? _b : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version });

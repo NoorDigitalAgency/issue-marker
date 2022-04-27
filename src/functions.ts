@@ -3,7 +3,7 @@ import { Metadata } from './types';
 
 export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<string>; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; labels: Array<string>; body: string; version: string }) {
 
-    const regex = /\s+<!--DO NOT EDIT THE BLOCK BELOW-->\s*<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>\s*<!--DO NOT EDIT THE BLOCK ABOVE-->\s+/ims;
+    const regex = /\s+(?:<!--.*?-->\s*)?<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>(?:\s*<!--.*?-->)?\s+/ims;
 
     const { stage, labels, body } = {...configuration};
 
@@ -27,5 +27,5 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
 
 function summerizeMetadata (metadata: string) {
 
-    return `<!--DO NOT EDIT THE BLOCK BELOW--><details data-id="issue-marker">\n<summary>Issue Marker Action's Metadata</summary>\n\n${metadata}\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE-->`;
+    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT--><details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n${metadata}\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
 }
