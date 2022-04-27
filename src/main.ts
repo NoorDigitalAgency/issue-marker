@@ -135,9 +135,9 @@ async function run(): Promise<void> {
 
       const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
-      const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body linked:pr label:${filterLabel}`)}`;
+      const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`)}`;
 
-      debug(`Query: '${query}'`);
+      debug(`Query: ${query}`);
 
       const items = (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 
