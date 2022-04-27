@@ -42,3 +42,9 @@ export interface History {
   commit: string;
   version: string;
 }
+
+export interface Link {
+  owner: string;
+  repo: string;
+  issue: number;
+}

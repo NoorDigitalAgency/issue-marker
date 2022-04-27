@@ -3,7 +3,7 @@ import { exec, getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
-import type { PullRequest } from './types';
+import type { Link, PullRequest } from './types';
 
 async function run(): Promise<void> {
 
@@ -15,13 +15,15 @@ async function run(): Promise<void> {
 
     const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
 
-    const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/m;
+    const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
 
     const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
 
     const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
 
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
+
+    const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
 
     const version = getInput('version', {required: true});
 
@@ -79,66 +81,19 @@ async function run(): Promise<void> {
 
       for (const merge of merges) {
 
-        const { pullRequest } = (await octokit.graphql<{data:{repository:{pullRequest: PullRequest}}}>(
-          `
-          query PullRequestIssues($owner: String!, $name: String!, $number: Int!) {
+        const pullRequest = (await octokit.rest.issues.get({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number })).data;
 
-            repository(name: $name, owner: $owner) {
+        let comments = pullRequest.body ?? '';
 
-              pullRequest(number: $number) {
+        if (pullRequest.comments > 0) {
 
-                number
+          comments += (await octokit.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number })).data.join(' ');
+        }
 
-                title
+        const links = [...comments.matchAll(linkRegex)].map(link => link.groups! as unknown as Link);
 
-                closed
-
-                issues: closingIssuesReferences(userLinkedOnly: true, first: 100) {
-
-                  nodes {
-
-                    body
-
-                    closed
-
-                    number
-
-                    repository {
-
-                      name
-
-                      owner {
-
-                        login
-                      }
-                    }
-
-                    labels(first: 100) {
-
-                      nodes {
-
-                        name
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          `,
-          {
-            owner: context.repo.owner,
-
-            name: context.repo.repo,
-
-            number: merge.number,
-
-            headers: {
-
-              authorization: `token ${token}`
-            },
-          }
-        )).data.repository;
+        for (const link of links) {
+        }
 
         pullRequests.push(pullRequest);
       }
