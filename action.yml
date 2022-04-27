@@ -8,9 +8,6 @@ inputs:
     version:
       required: true
       description: Release Version
-    reference:
-      required: true
-      description: Git Reference
     previous-version:
       required: false
       description: Previous Release Version

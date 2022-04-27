@@ -25,10 +25,6 @@ async function run(): Promise<void> {
 
     const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
 
-    const reference = getInput('reference', {required: true});
-
-    debug(`Reference: '${reference}'.`);
-
     const version = getInput('version', {required: true});
 
     debug(`Version: '${version}'.`);
@@ -63,9 +59,9 @@ async function run(): Promise<void> {
 
       await exec('git', ['fetch', '--all']);
 
-      const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${reference}` :
+      const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
-        reference, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
+        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
 
       if (logOutput.exitCode !== 0) throw new Error(logOutput.stderr);
 
