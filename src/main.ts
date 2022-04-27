@@ -57,8 +57,6 @@ async function run(): Promise<void> {
 
     if (stage === 'alpha') {
 
-      debug((await getExecOutput('git', ['log', version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit'])).stdout);
-
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);

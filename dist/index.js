@@ -25,7 +25,7 @@ function getIssueMetadata(configuration) {
 }
 exports.getIssueMetadata = getIssueMetadata;
 function summerizeMetadata(metadata) {
-    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT--><details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n${metadata}\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
+    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
 }
 
 
@@ -82,7 +82,6 @@ function run() {
             const octokit = (0, github_1.getOctokit)(token);
             const issues = new Array();
             if (stage === 'alpha') {
-                (0, core_1.debug)((yield (0, exec_1.getExecOutput)('git', ['log', version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit'])).stdout);
                 const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
                         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
                 if (logOutput.exitCode !== 0)

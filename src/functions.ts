@@ -27,5 +27,5 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
 
 function summerizeMetadata (metadata: string) {
 
-    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT--><details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n${metadata}\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
+    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
 }
