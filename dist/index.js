@@ -63,6 +63,8 @@ function run() {
             const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
             const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
             const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
+            const reference = (0, core_1.getInput)('reference', { required: true });
+            (0, core_1.debug)(`Reference: '${reference}'.`);
             const version = (0, core_1.getInput)('version', { required: true });
             (0, core_1.debug)(`Version: '${version}'.`);
             if ([productionRegex, betaRegex, alphaRegex].every(regex => !regex.test(version)))
@@ -83,8 +85,8 @@ function run() {
             const issues = new Array();
             if (stage === 'alpha') {
                 yield (0, exec_1.exec)('git', ['fetch', '--all']);
-                const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
-                        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit', `--grep='Merge pull request #'`]);
+                const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${reference}` :
+                        reference, '--reverse', '--merges', '--oneline', '--no-abbrev-commit', `--grep='Merge pull request #'`]);
                 if (logOutput.exitCode !== 0)
                     throw new Error(logOutput.stderr);
                 const log = logOutput.stdout;
