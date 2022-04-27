@@ -10,14 +10,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getIssueMetadata = void 0;
 const js_yaml_1 = __nccwpck_require__(1917);
 function getIssueMetadata(configuration) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     const regex = /\s+(?:<!--.*?-->\s*)?<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>(?:\s*<!--.*?-->)?\s+/ims;
     const { stage, labels, body } = Object.assign({}, configuration);
     const metadataYaml = (_b = (_a = (body !== null && body !== void 0 ? body : '').match(regex)) === null || _a === void 0 ? void 0 : _a.groups) === null || _b === void 0 ? void 0 : _b.details;
     if (stage !== 'alpha' && !metadataYaml) {
         throw new Error();
     }
-    const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [{ commit: configuration.commit, version: configuration.version }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
+    const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? (_d = (_c = Object.assign({}, (0, js_yaml_1.load)(metadataYaml))) === null || _c === void 0 ? void 0 : _c.history) !== null && _d !== void 0 ? _d : [] : []), { commit: configuration.commit, version: configuration.version }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
     const metadata = { application: 'issue-marker', repository, commit, version, history };
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body !== null && body !== void 0 ? body : ''}\n\n${summerizeMetadata((0, js_yaml_1.dump)(metadata, { forceQuotes: true, quotingType: "'" }))}\n\n`;
     const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
@@ -124,7 +124,7 @@ function run() {
             else if (stage === 'production' || stage === 'beta') {
                 const currentBranch = stage === 'production' ? 'main' : 'release';
                 const filterLabel = stage === 'production' ? 'beta' : 'alpha';
-                const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`)}`;
+                const query = encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`);
                 (0, core_1.debug)(`Query: ${query}`);
                 const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
                 for (const issue of items) {

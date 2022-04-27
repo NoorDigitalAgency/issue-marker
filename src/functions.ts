@@ -14,7 +14,7 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
         throw new Error();
     }
 
-    const { commit, repository, version, history } = configuration.stage === 'alpha' ? {...configuration, history: [{ commit: configuration.commit, version: configuration.version}]} : {...load(metadataYaml!) as Metadata};
+    const { commit, repository, version, history } = configuration.stage === 'alpha' ? {...configuration, history: [...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : []), {commit: configuration.commit, version: configuration.version}]} : {...load(metadataYaml!) as Metadata};
 
     const metadata = { application: 'issue-marker', repository, commit, version, history } as Metadata;
 

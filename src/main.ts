@@ -135,7 +135,7 @@ async function run(): Promise<void> {
 
       const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
-      const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`)}`;
+      const query = encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`);
 
       debug(`Query: ${query}`);
 
