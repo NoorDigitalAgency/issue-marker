@@ -59,7 +59,7 @@ async function run(): Promise<void> {
 
       // git fetch --prune --unshallow --tags --all
 
-      await exec('git', ['fetch', '--prune', '--unshallow', '--tags', '--all']);
+      // await exec('git', ['fetch', '--all']);
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 

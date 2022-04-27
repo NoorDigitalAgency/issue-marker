@@ -82,7 +82,8 @@ function run() {
             const octokit = (0, github_1.getOctokit)(token);
             const issues = new Array();
             if (stage === 'alpha') {
-                yield (0, exec_1.exec)('git', ['fetch', '--all']);
+                // git fetch --prune --unshallow --tags --all
+                // await exec('git', ['fetch', '--all']);
                 const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
                         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit', `--grep='Merge pull request #'`]);
                 if (logOutput.exitCode !== 0)
@@ -124,7 +125,7 @@ function run() {
             }
             else if (stage === 'production' || stage === 'beta') {
                 const currentBranch = stage === 'production' ? 'main' : 'release';
-                yield (0, exec_1.exec)('git', ['fetch', '--all']);
+                yield (0, exec_1.exec)('git', ['fetch', '--prune', '--unshallow', '--tags', '--all']);
                 const filterLabel = stage === 'production' ? 'beta' : 'alpha';
                 const query = `q=${encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body linked:pr label:${filterLabel}`)}`;
                 const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
