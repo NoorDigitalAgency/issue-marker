@@ -83,6 +83,7 @@ function run() {
             const issues = new Array();
             if (stage === 'alpha') {
                 (0, core_1.debug)((yield (0, exec_1.getExecOutput)('git', ['tag'])).stdout);
+                (0, core_1.debug)((yield (0, exec_1.getExecOutput)('git', ['log', version, '--oneline'])).stdout);
                 const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
                         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit', `--grep='Merge pull request #'`]);
                 if (logOutput.exitCode !== 0)

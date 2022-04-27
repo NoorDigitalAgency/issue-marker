@@ -59,6 +59,8 @@ async function run(): Promise<void> {
 
       debug((await getExecOutput('git', ['tag'])).stdout);
 
+      debug((await getExecOutput('git', ['log', version, '--oneline'])).stdout);
+
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit',  `--grep='Merge pull request #'`]);
