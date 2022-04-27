@@ -3,7 +3,7 @@ import { exec, getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
-import type { Link, PullRequest } from './types';
+import type { Link } from './types';
 
 async function run(): Promise<void> {
 
@@ -77,56 +77,58 @@ async function run(): Promise<void> {
 
       if (merges.length === 0) throw new Error('No merges found.');
 
-      let pullRequests = new Array<PullRequest>();
-
       for (const merge of merges) {
 
         const pullRequest = (await octokit.rest.issues.get({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number })).data;
 
-        let comments = pullRequest.body ?? '';
+        let body = pullRequest.body ?? '';
 
         if (pullRequest.comments > 0) {
 
-          comments += (await octokit.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number })).data.join(' ');
+          let count = 0;
+
+          let page = 1;
+
+          while (count < pullRequest.comments) {
+
+            const comments = (await octokit.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number, page, per_page: 100 })).data;
+
+            body += comments.map(comment => comment.body ?? '').join(' ');
+
+            page++;
+
+            count += comments.length;
+          }
         }
 
-        const links = [...comments.matchAll(linkRegex)].map(link => link.groups! as unknown as Link);
+        const links = [...body.matchAll(linkRegex)].map(link => link.groups! as unknown as Link)
+
+          .filter((link, i, all) => all.findIndex(l => `${link.owner.toLowerCase()}/${link.repo.toLowerCase()}#${link.issue}` === `${l.owner.toLowerCase()}/${l.repo.toLowerCase()}#${l.issue}`) === i);
+
+        startGroup('Links');
+
+        debug(inspect(links));
+
+        endGroup();
 
         for (const link of links) {
+
+          const issue = (await octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
+
+          if (issue.state !== 'closed' && issue.labels.every(label => ['alpha', 'beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
+
+            issues.push({
+
+              id: `${link.owner}/${link.repo}#${link.issue}`,
+
+              ...getIssueMetadata({stage, body: issue.body ?? '', commit: merge.hash, labels: issue.labels.filter(label => typeof(label) === 'string' ? label : label.name)
+
+                .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>,
+
+                repository: `${link.owner}/${link.repo}`, version})
+            });
+          }
         }
-
-        pullRequests.push(pullRequest);
-      }
-
-      startGroup('Loaded pull requests');
-
-      debug(inspect(pullRequests));
-
-      endGroup();
-
-      pullRequests = pullRequests.map(pullRequest => ({...pullRequest, issues: {nodes: pullRequest.issues.nodes.filter(issue => !issue.closed &&
-
-        issue.labels.nodes.every(label => ['alpha', 'beta', 'production'].every(stageLabel => label.name !== stageLabel)))}}))
-
-        .filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0);
-
-      startGroup('Filtered pull requests');
-
-      debug(inspect(pullRequests));
-
-      endGroup();
-
-      const commitIssues = pullRequests.map(pullRequest => ({hash: merges.filter(merge => merge.number === pullRequest.number).pop()!.hash, issues: pullRequest.issues.nodes}))
-
-        .flatMap(commitIssue => commitIssue.issues.map(issue => ({hash: commitIssue.hash, issue: issue})));
-
-      for (const commitIssue of commitIssues) {
-
-        issues.push({id: `${commitIssue.issue.repository.owner}/${commitIssue.issue.repository.name}#${commitIssue.issue.number}`,
-
-          ...getIssueMetadata({stage, body: commitIssue.issue.body, commit: commitIssue.hash, labels: commitIssue.issue.labels.nodes.map(label => label.name),
-
-            repository: `${commitIssue.issue.repository.owner.login}/${commitIssue.issue.repository.name}`, version})});
       }
 
     } else if (stage === 'production' || stage === 'beta') {

@@ -52,16 +52,17 @@ const github_1 = __nccwpck_require__(5438);
 const util_1 = __nccwpck_require__(3837);
 const functions_1 = __nccwpck_require__(358);
 function run() {
-    var _a, _b;
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
             const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/;
             const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
-            const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/m;
+            const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
             const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
             const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
             const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
+            const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
             const version = (0, core_1.getInput)('version', { required: true });
             (0, core_1.debug)(`Version: '${version}'.`);
             if ([productionRegex, betaRegex, alphaRegex].every(regex => !regex.test(version)))
@@ -93,77 +94,32 @@ function run() {
                 const merges = [...((_a = log.matchAll(logRegex)) !== null && _a !== void 0 ? _a : [])].map(merge => ({ hash: merge.groups.hash, number: +merge.groups.number }));
                 if (merges.length === 0)
                     throw new Error('No merges found.');
-                let pullRequests = new Array();
                 for (const merge of merges) {
-                    const { pullRequest } = (yield octokit.graphql(`
-          query PullRequestIssues($owner: String!, $name: String!, $number: Int!) {
-
-            repository(name: $name, owner: $owner) {
-
-              pullRequest(number: $number) {
-
-                number
-
-                title
-
-                closed
-
-                issues: closingIssuesReferences(userLinkedOnly: true, first: 100) {
-
-                  nodes {
-
-                    body
-
-                    closed
-
-                    number
-
-                    repository {
-
-                      name
-
-                      owner {
-
-                        login
-                      }
+                    const pullRequest = (yield octokit.rest.issues.get({ owner: github_1.context.repo.owner, repo: github_1.context.repo.repo, issue_number: merge.number })).data;
+                    let body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
+                    if (pullRequest.comments > 0) {
+                        let count = 0;
+                        let page = 1;
+                        while (count < pullRequest.comments) {
+                            const comments = (yield octokit.rest.issues.listComments({ owner: github_1.context.repo.owner, repo: github_1.context.repo.repo, issue_number: merge.number, page, per_page: 100 })).data;
+                            body += comments.map(comment => { var _a; return (_a = comment.body) !== null && _a !== void 0 ? _a : ''; }).join(' ');
+                            page++;
+                            count += comments.length;
+                        }
                     }
-
-                    labels(first: 100) {
-
-                      nodes {
-
-                        name
-                      }
+                    const links = [...body.matchAll(linkRegex)].map(link => link.groups)
+                        .filter((link, i, all) => all.findIndex(l => `${link.owner.toLowerCase()}/${link.repo.toLowerCase()}#${link.issue}` === `${l.owner.toLowerCase()}/${l.repo.toLowerCase()}#${l.issue}`) === i);
+                    (0, core_1.startGroup)('Links');
+                    (0, core_1.debug)((0, util_1.inspect)(links));
+                    (0, core_1.endGroup)();
+                    for (const link of links) {
+                        const issue = (yield octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
+                        if (issue.state !== 'closed' && issue.labels.every(label => ['alpha', 'beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
+                            issues.push(Object.assign({ id: `${link.owner}/${link.repo}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_c = issue.body) !== null && _c !== void 0 ? _c : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
+                                    .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string'),
+                                repository: `${link.owner}/${link.repo}`, version })));
+                        }
                     }
-                  }
-                }
-              }
-            }
-          }
-          `, {
-                        owner: github_1.context.repo.owner,
-                        name: github_1.context.repo.repo,
-                        number: merge.number,
-                        headers: {
-                            authorization: `token ${token}`
-                        },
-                    })).data.repository;
-                    pullRequests.push(pullRequest);
-                }
-                (0, core_1.startGroup)('Loaded pull requests');
-                (0, core_1.debug)((0, util_1.inspect)(pullRequests));
-                (0, core_1.endGroup)();
-                pullRequests = pullRequests.map(pullRequest => (Object.assign(Object.assign({}, pullRequest), { issues: { nodes: pullRequest.issues.nodes.filter(issue => !issue.closed &&
-                            issue.labels.nodes.every(label => ['alpha', 'beta', 'production'].every(stageLabel => label.name !== stageLabel))) } })))
-                    .filter(pullRequest => pullRequest.closed && pullRequest.issues.nodes.length > 0);
-                (0, core_1.startGroup)('Filtered pull requests');
-                (0, core_1.debug)((0, util_1.inspect)(pullRequests));
-                (0, core_1.endGroup)();
-                const commitIssues = pullRequests.map(pullRequest => ({ hash: merges.filter(merge => merge.number === pullRequest.number).pop().hash, issues: pullRequest.issues.nodes }))
-                    .flatMap(commitIssue => commitIssue.issues.map(issue => ({ hash: commitIssue.hash, issue: issue })));
-                for (const commitIssue of commitIssues) {
-                    issues.push(Object.assign({ id: `${commitIssue.issue.repository.owner}/${commitIssue.issue.repository.name}#${commitIssue.issue.number}` }, (0, functions_1.getIssueMetadata)({ stage, body: commitIssue.issue.body, commit: commitIssue.hash, labels: commitIssue.issue.labels.nodes.map(label => label.name),
-                        repository: `${commitIssue.issue.repository.owner.login}/${commitIssue.issue.repository.name}`, version })));
                 }
             }
             else if (stage === 'production' || stage === 'beta') {
@@ -174,7 +130,7 @@ function run() {
                 const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
                 for (const issue of items) {
                     const { repository } = issue.url.match(issueRegex).groups;
-                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_b = issue.body) !== null && _b !== void 0 ? _b : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version });
+                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_d = issue.body) !== null && _d !== void 0 ? _d : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version });
                     const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
                     if (branchesOutput.exitCode !== 0)
                         throw new Error(branchesOutput.stderr);
