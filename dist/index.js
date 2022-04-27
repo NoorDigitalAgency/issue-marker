@@ -82,10 +82,9 @@ function run() {
             const octokit = (0, github_1.getOctokit)(token);
             const issues = new Array();
             if (stage === 'alpha') {
-                (0, core_1.debug)((yield (0, exec_1.getExecOutput)('git', ['tag'])).stdout);
-                (0, core_1.debug)((yield (0, exec_1.getExecOutput)('git', ['log', version, '--oneline'])).stdout);
+                (0, core_1.debug)((yield (0, exec_1.getExecOutput)('git', ['log', version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit'])).stdout);
                 const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
-                        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit', `--grep='Merge pull request #'`]);
+                        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
                 if (logOutput.exitCode !== 0)
                     throw new Error(logOutput.stderr);
                 const log = logOutput.stdout;
