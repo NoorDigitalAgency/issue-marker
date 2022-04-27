@@ -207,7 +207,7 @@ async function run(): Promise<void> {
     }
 
     if (issues.length === 0) throw new Error('No issues to mark.');
-    
+
     startGroup('Issues');
 
     debug(inspect(issues));
