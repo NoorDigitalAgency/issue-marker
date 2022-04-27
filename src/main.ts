@@ -59,7 +59,7 @@ async function run(): Promise<void> {
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
-        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit', '--grep', '"Merge pull request #"']);
+        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
 
       if (logOutput.exitCode !== 0) throw new Error(logOutput.stderr);
 
