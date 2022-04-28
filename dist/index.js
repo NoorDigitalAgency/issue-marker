@@ -17,8 +17,8 @@ function getIssueMetadata(configuration) {
     if (stage !== 'alpha' && !metadataYaml) {
         throw new Error();
     }
-    const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? (_d = (_c = Object.assign({}, (0, js_yaml_1.load)(metadataYaml))) === null || _c === void 0 ? void 0 : _c.history) !== null && _d !== void 0 ? _d : [] : []), { version: configuration.version, commit: configuration.commit }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
-    const metadata = { application: 'issue-marker', repository, version, commit, history: history.reverse() };
+    const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [{ version: configuration.version, commit: configuration.commit }, ...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? (_d = (_c = Object.assign({}, (0, js_yaml_1.load)(metadataYaml))) === null || _c === void 0 ? void 0 : _c.history) !== null && _d !== void 0 ? _d : [] : [])] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
+    const metadata = { application: 'issue-marker', repository, version, commit, history };
     if (stage !== 'alpha') {
         metadata.version = configuration.version;
         metadata.commit = configuration.commit;

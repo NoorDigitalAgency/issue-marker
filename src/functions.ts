@@ -16,11 +16,11 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
 
     const { commit, repository, version, history } = configuration.stage === 'alpha' ?
 
-        {...configuration, history: [...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : []), {version: configuration.version, commit: configuration.commit}]} :
+        {...configuration, history: [{version: configuration.version, commit: configuration.commit}, ...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : [])]} :
 
         {...load(metadataYaml!) as Metadata};
 
-    const metadata = { application: 'issue-marker', repository, version, commit, history: history.reverse() } as Metadata;
+    const metadata = { application: 'issue-marker', repository, version, commit, history } as Metadata;
 
     if (stage !== 'alpha') {
 

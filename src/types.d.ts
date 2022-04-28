@@ -7,8 +7,8 @@ export interface Metadata {
 }
 
 export interface History {
-  commit: string;
   version: string;
+  commit: string;
 }
 
 export interface Link {

@@ -188,7 +188,7 @@ async function run(): Promise<void> {
 
         const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
 
-        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined });
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined});
 
       } catch (error) {
 
