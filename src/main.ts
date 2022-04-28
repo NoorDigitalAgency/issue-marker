@@ -115,15 +115,17 @@ async function run(): Promise<void> {
 
           if (issue.state !== 'closed' && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
+            const { repository } = issue.url.match(issueRegex)!.groups!;
+
             issues.push({
 
-              id: `${link.owner}/${link.repo}#${link.issue}`,
+              id: `${repository}#${link.issue}`,
 
               ...getIssueMetadata({stage, body: issue.body ?? '', commit: merge.hash, labels: issue.labels.filter(label => typeof(label) === 'string' ? label : label.name)
 
                 .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>,
 
-                repository: `${link.owner}/${link.repo}`, version})
+                repository, version})
             });
           }
         }

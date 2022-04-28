@@ -114,9 +114,10 @@ function run() {
                     for (const link of links) {
                         const issue = (yield octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
                         if (issue.state !== 'closed' && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
-                            issues.push(Object.assign({ id: `${link.owner}/${link.repo}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_c = issue.body) !== null && _c !== void 0 ? _c : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
+                            const { repository } = issue.url.match(issueRegex).groups;
+                            issues.push(Object.assign({ id: `${repository}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_c = issue.body) !== null && _c !== void 0 ? _c : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
                                     .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string'),
-                                repository: `${link.owner}/${link.repo}`, version })));
+                                repository, version })));
                         }
                     }
                 }
