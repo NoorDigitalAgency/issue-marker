@@ -7,6 +7,6 @@ on:
 jobs:
   merge:
     if: ${{ github.event.label.name == 'dependencies' }}
-    uses: NoorDigitalAgency/.github/.github/workflows/auto-merge@main
+    uses: NoorDigitalAgency/.github/.github/workflows/auto-merge.yaml@main
     secrets:
       token: ${{ secrets.ACTIONS_TOKEN }}
