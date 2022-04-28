@@ -19,7 +19,7 @@ async function run(): Promise<void> {
 
     const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
 
-    const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
+    const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
 
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 

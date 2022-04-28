@@ -60,7 +60,7 @@ function run() {
             const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
             const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
             const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
-            const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/m;
+            const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
             const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
             const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
             const version = (0, core_1.getInput)('version', { required: true });
