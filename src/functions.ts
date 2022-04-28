@@ -16,19 +16,19 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
 
     const { commit, repository, version, history } = configuration.stage === 'alpha' ?
 
-        {...configuration, history: [...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : []), {commit: configuration.commit, version: configuration.version}]} :
+        {...configuration, history: [...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : []), {version: configuration.version, commit: configuration.commit}]} :
 
         {...load(metadataYaml!) as Metadata};
 
-    const metadata = { application: 'issue-marker', repository, commit, version, history: history.reverse() } as Metadata;
+    const metadata = { application: 'issue-marker', repository, version, commit, history: history.reverse() } as Metadata;
 
     if (stage !== 'alpha') {
 
-        metadata.history = [{commit: configuration.commit, version: configuration.version}, ...history];
+        metadata.version = configuration.version;
 
         metadata.commit = configuration.commit;
 
-        metadata.version = configuration.version;
+        metadata.history = [{version: configuration.version, commit: configuration.commit}, ...history];
     }
 
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summerizeMetadata(dump(metadata, {forceQuotes: true, quotingType: "'"}))}\n\n`;

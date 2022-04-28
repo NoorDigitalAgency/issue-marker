@@ -17,12 +17,12 @@ function getIssueMetadata(configuration) {
     if (stage !== 'alpha' && !metadataYaml) {
         throw new Error();
     }
-    const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? (_d = (_c = Object.assign({}, (0, js_yaml_1.load)(metadataYaml))) === null || _c === void 0 ? void 0 : _c.history) !== null && _d !== void 0 ? _d : [] : []), { commit: configuration.commit, version: configuration.version }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
-    const metadata = { application: 'issue-marker', repository, commit, version, history: history.reverse() };
+    const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? (_d = (_c = Object.assign({}, (0, js_yaml_1.load)(metadataYaml))) === null || _c === void 0 ? void 0 : _c.history) !== null && _d !== void 0 ? _d : [] : []), { version: configuration.version, commit: configuration.commit }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
+    const metadata = { application: 'issue-marker', repository, version, commit, history: history.reverse() };
     if (stage !== 'alpha') {
-        metadata.history = [{ commit: configuration.commit, version: configuration.version }, ...history];
-        metadata.commit = configuration.commit;
         metadata.version = configuration.version;
+        metadata.commit = configuration.commit;
+        metadata.history = [{ version: configuration.version, commit: configuration.commit }, ...history];
     }
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body !== null && body !== void 0 ? body : ''}\n\n${summerizeMetadata((0, js_yaml_1.dump)(metadata, { forceQuotes: true, quotingType: "'" }))}\n\n`;
     const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
