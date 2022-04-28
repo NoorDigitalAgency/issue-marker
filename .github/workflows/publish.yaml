@@ -10,7 +10,7 @@ on:
 
 jobs:
   publish:
-    uses: NoorDigitalAgency/.github/.github/workflows/publish-action@main
+    uses: NoorDigitalAgency/.github/.github/workflows/publish-action.yaml@main
     with:
       branch: main
     secrets:
