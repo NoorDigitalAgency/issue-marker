@@ -5,7 +5,7 @@ on:
     types: [labeled]
 
 jobs:
-  build:
+  merge:
     if: ${{ github.event.label.name == 'dependencies' }}
     uses: NoorDigitalAgency/.github/.github/workflows/auto-merge@main
     secrets:
