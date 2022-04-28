@@ -15,6 +15,10 @@ inputs:
       required: false
       description: Previous Release Version
       default: ''
+    close-issues:
+      required: false
+      default: 'true'
+      description: Close Issues on Merge to Production
 runs:
   using: 'node16'
   main: 'dist/index.js'

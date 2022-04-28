@@ -82,6 +82,8 @@ function run() {
             (0, core_1.debug)(`Token: '${token}'.`);
             const reference = (0, core_1.getInput)('reference', { required: true });
             (0, core_1.debug)(`Reference: '${reference}'.`);
+            const close = (0, core_1.getBooleanInput)('close-issues');
+            (0, core_1.debug)(`Close Issue: ${close}.`);
             const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
             (0, core_1.debug)(`Stage: '${stage}'.`);
             if (typeof (stage) === 'undefined')
@@ -157,7 +159,7 @@ function run() {
             for (const issue of issues) {
                 try {
                     const { owner, repo, number } = issue.id.match(idRegex).groups;
-                    yield octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels });
+                    yield octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined });
                 }
                 catch (error) {
                     (0, core_1.startGroup)('Issue Update Error');

@@ -1,4 +1,4 @@
-import { debug, endGroup, getInput, startGroup, warning } from '@actions/core';
+import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
@@ -48,6 +48,10 @@ async function run(): Promise<void> {
     const reference = getInput('reference', {required: true});
 
     debug(`Reference: '${reference}'.`);
+
+    const close = getBooleanInput('close-issues');
+
+    debug(`Close Issue: ${close}.`);
 
     const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
 
@@ -184,7 +188,7 @@ async function run(): Promise<void> {
 
         const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
 
-        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels});
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined });
 
       } catch (error) {
 
