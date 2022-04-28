@@ -18,7 +18,12 @@ function getIssueMetadata(configuration) {
         throw new Error();
     }
     const { commit, repository, version, history } = configuration.stage === 'alpha' ? Object.assign(Object.assign({}, configuration), { history: [...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? (_d = (_c = Object.assign({}, (0, js_yaml_1.load)(metadataYaml))) === null || _c === void 0 ? void 0 : _c.history) !== null && _d !== void 0 ? _d : [] : []), { commit: configuration.commit, version: configuration.version }] }) : Object.assign({}, (0, js_yaml_1.load)(metadataYaml));
-    const metadata = { application: 'issue-marker', repository, commit, version, history };
+    const metadata = { application: 'issue-marker', repository, commit, version, history: history.reverse() };
+    if (stage !== 'alpha') {
+        metadata.history = [{ commit: configuration.commit, version: configuration.version }, ...history];
+        metadata.commit = configuration.commit;
+        metadata.version = configuration.version;
+    }
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body !== null && body !== void 0 ? body : ''}\n\n${summerizeMetadata((0, js_yaml_1.dump)(metadata, { forceQuotes: true, quotingType: "'" }))}\n\n`;
     const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
     return { body: outputBody, labels: outputLabels, commit };
@@ -75,6 +80,8 @@ function run() {
                 throw new Error(`Version '${version}' and Previous Version '${previousVersion}' are from different stages.`);
             const token = (0, core_1.getInput)('token', { required: true });
             (0, core_1.debug)(`Token: '${token}'.`);
+            const reference = (0, core_1.getInput)('reference', { required: true });
+            (0, core_1.debug)(`Reference: '${reference}'.`);
             const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
             (0, core_1.debug)(`Stage: '${stage}'.`);
             if (typeof (stage) === 'undefined')
@@ -133,14 +140,11 @@ function run() {
                 (0, core_1.endGroup)();
                 for (const issue of items) {
                     const { repository } = issue.url.match(issueRegex).groups;
-                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_d = issue.body) !== null && _d !== void 0 ? _d : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version });
+                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_d = issue.body) !== null && _d !== void 0 ? _d : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version, commit: reference });
                     const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
                     if (branchesOutput.exitCode !== 0)
                         throw new Error(branchesOutput.stderr);
                     const branches = branchesOutput.stdout;
-                    (0, core_1.startGroup)('Branches Output');
-                    (0, core_1.debug)(branches);
-                    (0, core_1.endGroup)();
                     if ([...branches.matchAll(branchRegex)].map(branch => branch.groups.branch).includes(currentBranch))
                         issues.push({ id: `${repository}#${issue.number}`, body, labels });
                 }

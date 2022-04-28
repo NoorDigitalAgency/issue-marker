@@ -1,7 +1,7 @@
 import { load, dump } from 'js-yaml';
 import { Metadata } from './types';
 
-export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<string>; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; labels: Array<string>; body: string; version: string }) {
+export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<string>; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; labels: Array<string>; body: string; version: string; commit: string}) {
 
     const regex = /\s+(?:<!--.*?-->\s*)?<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>(?:\s*<!--.*?-->)?\s+/ims;
 
@@ -14,9 +14,22 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
         throw new Error();
     }
 
-    const { commit, repository, version, history } = configuration.stage === 'alpha' ? {...configuration, history: [...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : []), {commit: configuration.commit, version: configuration.version}]} : {...load(metadataYaml!) as Metadata};
+    const { commit, repository, version, history } = configuration.stage === 'alpha' ?
 
-    const metadata = { application: 'issue-marker', repository, commit, version, history } as Metadata;
+        {...configuration, history: [...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : []), {commit: configuration.commit, version: configuration.version}]} :
+
+        {...load(metadataYaml!) as Metadata};
+
+    const metadata = { application: 'issue-marker', repository, commit, version, history: history.reverse() } as Metadata;
+
+    if (stage !== 'alpha') {
+
+        metadata.history = [{commit: configuration.commit, version: configuration.version}, ...history];
+
+        metadata.commit = configuration.commit;
+
+        metadata.version = configuration.version;
+    }
 
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summerizeMetadata(dump(metadata, {forceQuotes: true, quotingType: "'"}))}\n\n`;
 

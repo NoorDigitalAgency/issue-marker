@@ -45,6 +45,10 @@ async function run(): Promise<void> {
 
     debug(`Token: '${token}'.`);
 
+    const reference = getInput('reference', {required: true});
+
+    debug(`Reference: '${reference}'.`);
+
     const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
 
     debug(`Stage: '${stage}'.`);
@@ -153,19 +157,13 @@ async function run(): Promise<void> {
 
         const { repository } = issue.url.match(issueRegex)!.groups!;
 
-        const {body, commit, labels} = getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version});
+        const {body, commit, labels} = getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version, commit: reference});
 
         const branchesOutput = await getExecOutput('git', ['branch', '-r', '--contains', commit]);
 
         if (branchesOutput.exitCode !== 0) throw new Error(branchesOutput.stderr);
 
         const branches = branchesOutput.stdout;
-
-        startGroup('Branches Output');
-
-        debug(branches);
-
-        endGroup();
 
         if ([...branches.matchAll(branchRegex)].map(branch => branch.groups!.branch).includes(currentBranch)) issues.push({id: `${repository}#${issue.number}`, body, labels});
       }

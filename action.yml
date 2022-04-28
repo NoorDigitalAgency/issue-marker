@@ -5,6 +5,9 @@ inputs:
     token:
       required: true
       description: Token
+    reference:
+      required: true
+      description: Git Reference
     version:
       required: true
       description: Release Version
