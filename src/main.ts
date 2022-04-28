@@ -113,7 +113,7 @@ async function run(): Promise<void> {
 
           const issue = (await octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
 
-          if (issue.state !== 'closed' && issue.labels.every(label => ['alpha', 'beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
+          if (issue.state !== 'closed' && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
             issues.push({
 
@@ -135,7 +135,7 @@ async function run(): Promise<void> {
 
       const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
-      const query = encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`);
+      const query = `"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
 
       debug(`Query: ${query}`);
 

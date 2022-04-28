@@ -113,7 +113,7 @@ function run() {
                     (0, core_1.endGroup)();
                     for (const link of links) {
                         const issue = (yield octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
-                        if (issue.state !== 'closed' && issue.labels.every(label => ['alpha', 'beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
+                        if (issue.state !== 'closed' && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
                             issues.push(Object.assign({ id: `${link.owner}/${link.repo}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_c = issue.body) !== null && _c !== void 0 ? _c : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
                                     .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string'),
                                 repository: `${link.owner}/${link.repo}`, version })));
@@ -124,7 +124,7 @@ function run() {
             else if (stage === 'production' || stage === 'beta') {
                 const currentBranch = stage === 'production' ? 'main' : 'release';
                 const filterLabel = stage === 'production' ? 'beta' : 'alpha';
-                const query = encodeURIComponent(`"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`);
+                const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
                 (0, core_1.debug)(`Query: ${query}`);
                 const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
                 (0, core_1.startGroup)('Query Items');
