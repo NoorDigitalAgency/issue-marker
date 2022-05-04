@@ -1,7 +1,7 @@
 # Issue Marker
 
 Used for:
-- Marks the issue with the stage where the commit is merges and some metadata used by the marker
+- Marks the issue with the stage where the commit is merged and some metadata used by the marker
 
 Usage:
 ```yaml
