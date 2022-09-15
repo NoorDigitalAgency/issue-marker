@@ -19,10 +19,6 @@ inputs:
       required: false
       default: 'true'
       description: Close Issues on Merge to Production
-    check-only:
-      required: false
-      default: 'false'
-      description: Only check and generate markdown output
 runs:
   using: 'node16'
   main: 'dist/index.js'

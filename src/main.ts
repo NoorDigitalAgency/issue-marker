@@ -1,4 +1,4 @@
-import { debug, endGroup, getBooleanInput, getInput, startGroup, warning, setOutput } from '@actions/core';
+import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
@@ -50,10 +50,6 @@ async function run(): Promise<void> {
     debug(`Reference: '${reference}'.`);
 
     const close = getBooleanInput('close-issues');
-
-    debug(`Close Issue: ${close}.`);
-
-    const checking = getBooleanInput('check-only');
 
     debug(`Close Issue: ${close}.`);
 
@@ -178,54 +174,34 @@ async function run(): Promise<void> {
 
     }
 
-    if (!checking) {
+    if (issues.length === 0) throw new Error('No issues to mark.');
 
-      if (issues.length === 0) throw new Error('No issues to mark.');
+    startGroup('Issues');
 
-      startGroup('Issues');
+    debug(inspect(issues));
 
-      debug(inspect(issues));
+    endGroup();
 
-      endGroup();
+    for (const issue of issues) {
 
-      for (const issue of issues) {
+      try {
 
-        try {
+        const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
 
-          const {owner, repo, number} = issue.id.match(idRegex)!.groups!;
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined});
 
-          await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined});
+      } catch (error) {
 
-        } catch (error) {
+        startGroup('Issue Update Error');
 
-          startGroup('Issue Update Error');
+        debug(inspect(issue));
 
-          debug(inspect(issue));
+        debug(inspect(error));
 
-          debug(inspect(error));
+        endGroup();
 
-          endGroup();
-
-          if (error instanceof Error) warning(error.message);
-        }
+        if (error instanceof Error) warning(error.message);
       }
-
-    } else {
-
-      let markdown = '';
-
-      if (issues.length === 0) {
-
-        warning('No issues to mark.');
-
-        markdown = '⚠️ **No issues to be marked!**\nPlease make sure to link the issues related to this PR in the format of `NoorDigitalAgency/repository-name#123` wher `123` is the issue number.';
-
-      } else {
-
-        markdown = `✅ **Issues to be marked:**\n${issues.reduce((previous, current, index) => `${previous}${index + 1}. ${current.id}\n`, '')}`;
-      }
-
-      setOutput('results', markdown);
     }
 
   } catch (error) {
