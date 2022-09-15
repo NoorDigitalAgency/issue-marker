@@ -84,6 +84,8 @@ function run() {
             (0, core_1.debug)(`Reference: '${reference}'.`);
             const close = (0, core_1.getBooleanInput)('close-issues');
             (0, core_1.debug)(`Close Issue: ${close}.`);
+            const checking = (0, core_1.getBooleanInput)('check-only');
+            (0, core_1.debug)(`Close Issue: ${close}.`);
             const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
             (0, core_1.debug)(`Stage: '${stage}'.`);
             if (typeof (stage) === 'undefined')
@@ -151,24 +153,37 @@ function run() {
                         issues.push({ id: `${repository}#${issue.number}`, body, labels });
                 }
             }
-            if (issues.length === 0)
-                throw new Error('No issues to mark.');
-            (0, core_1.startGroup)('Issues');
-            (0, core_1.debug)((0, util_1.inspect)(issues));
-            (0, core_1.endGroup)();
-            for (const issue of issues) {
-                try {
-                    const { owner, repo, number } = issue.id.match(idRegex).groups;
-                    yield octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined });
+            if (!checking) {
+                if (issues.length === 0)
+                    throw new Error('No issues to mark.');
+                (0, core_1.startGroup)('Issues');
+                (0, core_1.debug)((0, util_1.inspect)(issues));
+                (0, core_1.endGroup)();
+                for (const issue of issues) {
+                    try {
+                        const { owner, repo, number } = issue.id.match(idRegex).groups;
+                        yield octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined });
+                    }
+                    catch (error) {
+                        (0, core_1.startGroup)('Issue Update Error');
+                        (0, core_1.debug)((0, util_1.inspect)(issue));
+                        (0, core_1.debug)((0, util_1.inspect)(error));
+                        (0, core_1.endGroup)();
+                        if (error instanceof Error)
+                            (0, core_1.warning)(error.message);
+                    }
                 }
-                catch (error) {
-                    (0, core_1.startGroup)('Issue Update Error');
-                    (0, core_1.debug)((0, util_1.inspect)(issue));
-                    (0, core_1.debug)((0, util_1.inspect)(error));
-                    (0, core_1.endGroup)();
-                    if (error instanceof Error)
-                        (0, core_1.warning)(error.message);
+            }
+            else {
+                let markdown = '';
+                if (issues.length === 0) {
+                    (0, core_1.warning)('No issues to mark.');
+                    markdown = '⚠️ **No issues to be marked!**\nPlease make sure to link the issues related to this PR in the format of `NoorDigitalAgency/repository-name#123` wher `123` is the issue number.';
                 }
+                else {
+                    markdown = `✅ **Issues to be marked:**\n${issues.reduce((previous, current, index) => `${previous}${index + 1}. ${current.id}\n`, '')}`;
+                }
+                (0, core_1.setOutput)('results', markdown);
             }
         }
         catch (error) {
