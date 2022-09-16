@@ -87,25 +87,7 @@ async function run(): Promise<void> {
 
         const pullRequest = (await octokit.rest.issues.get({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number })).data;
 
-        let body = pullRequest.body ?? '';
-
-        if (pullRequest.comments > 0) {
-
-          let count = 0;
-
-          let page = 1;
-
-          while (count < pullRequest.comments) {
-
-            const comments = (await octokit.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number, page, per_page: 100 })).data;
-
-            body += comments.map(comment => comment.body ?? '').join(' ');
-
-            page++;
-
-            count += comments.length;
-          }
-        }
+        const body = pullRequest.body ?? '';
 
         const owner = context.repo.owner;
 
