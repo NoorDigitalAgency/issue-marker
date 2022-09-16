@@ -67,7 +67,7 @@ function run() {
             const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
             const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
             const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
-            const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
+            const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
             const version = (0, core_1.getInput)('version', { required: true });
             (0, core_1.debug)(`Version: '${version}'.`);
             if ([productionRegex, betaRegex, alphaRegex].every(regex => !regex.test(version)))
@@ -115,14 +115,16 @@ function run() {
                             count += comments.length;
                         }
                     }
+                    const owner = github_1.context.repo.owner;
+                    const repo = github_1.context.repo.repo;
                     const links = [...body.matchAll(linkRegex)].map(link => link.groups)
-                        .filter((link, i, all) => all.findIndex(l => `${link.owner.toLowerCase()}/${link.repo.toLowerCase()}#${link.issue}` === `${l.owner.toLowerCase()}/${l.repo.toLowerCase()}#${l.issue}`) === i);
+                        .filter((link, i, all) => all.findIndex(l => { var _a, _b, _c, _d, _e, _f, _g, _h; return `${(_b = (_a = link.owner) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : owner}/${(_d = (_c = link.repo) === null || _c === void 0 ? void 0 : _c.toLowerCase()) !== null && _d !== void 0 ? _d : repo}#${link.issue}` === `${(_f = (_e = l.owner) === null || _e === void 0 ? void 0 : _e.toLowerCase()) !== null && _f !== void 0 ? _f : owner}/${(_h = (_g = l.repo) === null || _g === void 0 ? void 0 : _g.toLowerCase()) !== null && _h !== void 0 ? _h : repo}#${l.issue}`; }) === i);
                     (0, core_1.startGroup)('Links');
                     (0, core_1.debug)((0, util_1.inspect)(links));
                     (0, core_1.endGroup)();
                     for (const link of links) {
                         const issue = (yield octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
-                        if (issue.state !== 'closed' && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
+                        if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
                             const { repository } = issue.url.match(issueRegex).groups;
                             issues.push(Object.assign({ id: `${repository}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_c = issue.body) !== null && _c !== void 0 ? _c : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
                                     .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string'),
