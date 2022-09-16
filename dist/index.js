@@ -104,17 +104,7 @@ function run() {
                     throw new Error('No merges found.');
                 for (const merge of merges) {
                     const pullRequest = (yield octokit.rest.issues.get({ owner: github_1.context.repo.owner, repo: github_1.context.repo.repo, issue_number: merge.number })).data;
-                    let body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
-                    if (pullRequest.comments > 0) {
-                        let count = 0;
-                        let page = 1;
-                        while (count < pullRequest.comments) {
-                            const comments = (yield octokit.rest.issues.listComments({ owner: github_1.context.repo.owner, repo: github_1.context.repo.repo, issue_number: merge.number, page, per_page: 100 })).data;
-                            body += comments.map(comment => { var _a; return (_a = comment.body) !== null && _a !== void 0 ? _a : ''; }).join(' ');
-                            page++;
-                            count += comments.length;
-                        }
-                    }
+                    const body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
                     const owner = github_1.context.repo.owner;
                     const repo = github_1.context.repo.repo;
                     const links = [...body.matchAll(linkRegex)].map(link => link.groups)
