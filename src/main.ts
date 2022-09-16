@@ -23,7 +23,7 @@ async function run(): Promise<void> {
 
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 
-    const linkRegex = /(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+)#(?<issue>\d+)/ig;
+    const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
 
     const version = getInput('version', {required: true});
 
@@ -107,9 +107,13 @@ async function run(): Promise<void> {
           }
         }
 
+        const owner = context.repo.owner;
+
+        const repo = context.repo.repo;
+
         const links = [...body.matchAll(linkRegex)].map(link => link.groups! as unknown as Link)
 
-          .filter((link, i, all) => all.findIndex(l => `${link.owner.toLowerCase()}/${link.repo.toLowerCase()}#${link.issue}` === `${l.owner.toLowerCase()}/${l.repo.toLowerCase()}#${l.issue}`) === i);
+          .filter((link, i, all) => all.findIndex(l => `${link.owner?.toLowerCase() ?? owner}/${link.repo?.toLowerCase() ?? repo}#${link.issue}` === `${l.owner?.toLowerCase() ?? owner}/${l.repo?.toLowerCase() ?? repo}#${l.issue}`) === i);
 
         startGroup('Links');
 
@@ -121,7 +125,7 @@ async function run(): Promise<void> {
 
           const issue = (await octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
 
-          if (issue.state !== 'closed' && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
+          if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
             const { repository } = issue.url.match(issueRegex)!.groups!;
 
