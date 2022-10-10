@@ -83,15 +83,15 @@ async function run(): Promise<void> {
 
       if (merges.length === 0) throw new Error('No merges found.');
 
+      const owner = context.repo.owner;
+
+      const repo = context.repo.repo;
+
       for (const merge of merges) {
 
-        const pullRequest = (await octokit.rest.issues.get({ owner: context.repo.owner, repo: context.repo.repo, issue_number: merge.number })).data;
+        const pullRequest = (await octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
 
         const body = pullRequest.body ?? '';
-
-        const owner = context.repo.owner;
-
-        const repo = context.repo.repo;
 
         const links = [...body.matchAll(linkRegex)].map(link => link.groups! as unknown as Link)
 
@@ -119,7 +119,7 @@ async function run(): Promise<void> {
 
                 .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>,
 
-                repository: `${owner}/${repository}`, version})
+                repository: `${owner}/${repo}`, version})
             });
           }
         }
