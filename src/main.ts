@@ -119,7 +119,7 @@ async function run(): Promise<void> {
 
                 .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>,
 
-                repository, version})
+                repository: `${owner}/${repository}`, version})
             });
           }
         }
