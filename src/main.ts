@@ -87,6 +87,12 @@ async function run(): Promise<void> {
 
       const repo = context.repo.repo;
 
+      startGroup('Repo Object');
+
+      debug(inspect(context.repo));
+
+      endGroup();
+
       for (const merge of merges) {
 
         const pullRequest = (await octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
@@ -151,13 +157,13 @@ async function run(): Promise<void> {
 
         startGroup('Issue Body');
 
-        info(issue.body ?? '');
+        debug(issue.body ?? '');
 
         endGroup();
 
         startGroup('Modified Body');
 
-        info(body);
+        debug(body);
 
         endGroup();
 

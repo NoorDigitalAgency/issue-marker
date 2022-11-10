@@ -106,6 +106,9 @@ function run() {
                     throw new Error('No merges found.');
                 const owner = github_1.context.repo.owner;
                 const repo = github_1.context.repo.repo;
+                (0, core_1.startGroup)('Repo Object');
+                (0, core_1.debug)((0, util_1.inspect)(github_1.context.repo));
+                (0, core_1.endGroup)();
                 for (const merge of merges) {
                     const pullRequest = (yield octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
                     const body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
@@ -138,10 +141,10 @@ function run() {
                     const { repository } = issue.url.match(issueRegex).groups;
                     const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_d = issue.body) !== null && _d !== void 0 ? _d : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version, commit: reference });
                     (0, core_1.startGroup)('Issue Body');
-                    (0, core_1.info)((_e = issue.body) !== null && _e !== void 0 ? _e : '');
+                    (0, core_1.debug)((_e = issue.body) !== null && _e !== void 0 ? _e : '');
                     (0, core_1.endGroup)();
                     (0, core_1.startGroup)('Modified Body');
-                    (0, core_1.info)(body);
+                    (0, core_1.debug)(body);
                     (0, core_1.endGroup)();
                     const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
                     if (branchesOutput.exitCode !== 0)
