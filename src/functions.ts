@@ -1,9 +1,13 @@
 import { load, dump } from 'js-yaml';
 import { Metadata } from './types';
 
-export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<string>; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; labels: Array<string>; body: string; version: string; commit: string}) {
+const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 
-    const regex = /\s+(?:<!--.*?-->\s*)?<details data-id="issue-marker">.*?```yaml\s+(?<yaml>.*?)\s+```.*?<\/details>(?:\s*<!--.*?-->)?\s+/ims;
+const closerComment = '<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->';
+
+const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-marker">.*?\`\`\`yaml\\s+(?<yaml>.*?)\\s+\`\`\`.*?<\\/details>(?:\\s*${closerComment})?\\s+`, 'ims');
+
+export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<string>; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; labels: Array<string>; body: string; version: string; commit: string}) {
 
     const { stage, labels, body } = {...configuration};
 
@@ -31,14 +35,14 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
         metadata.history = [{version: configuration.version, commit: configuration.commit}, ...history];
     }
 
-    const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summerizeMetadata(dump(metadata, {forceQuotes: true, quotingType: "'"}))}\n\n`;
+    const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summarizeMetadata(dump(metadata, {forceQuotes: true, quotingType: "'"}))}\n\n`;
 
     const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
 
     return { body: outputBody, labels: outputLabels, commit };
 }
 
-function summerizeMetadata (metadata: string) {
+function summarizeMetadata (metadata: string) {
 
-    return `<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->`;
+    return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
