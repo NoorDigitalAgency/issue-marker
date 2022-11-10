@@ -1,4 +1,4 @@
-import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
+import { debug, endGroup, getBooleanInput, getInput, startGroup, warning, info } from '@actions/core';
 import { getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
@@ -148,6 +148,18 @@ async function run(): Promise<void> {
         const { repository } = issue.url.match(issueRegex)!.groups!;
 
         const {body, commit, labels} = getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version, commit: reference});
+
+        startGroup('Issue Body');
+
+        info(issue.body ?? '');
+
+        endGroup();
+
+        startGroup('Modified Body');
+
+        info(body);
+
+        endGroup();
 
         const branchesOutput = await getExecOutput('git', ['branch', '-r', '--contains', commit]);
 
