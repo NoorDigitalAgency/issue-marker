@@ -105,7 +105,15 @@ async function run(): Promise<void> {
 
         endGroup();
 
-        const links = [...body.matchAll(linkRegex)].map(link => link.groups! as unknown as Link)
+        const linkGroups = [...body.matchAll(linkRegex)].map(link => link.groups! as unknown as Link);
+
+        startGroup('Link Groups');
+
+        debug(inspect(linkGroups));
+
+        endGroup();
+
+        const links = linkGroups
 
           .filter((link, i, all) => all.findIndex(l => `${link.owner?.toLowerCase() ?? owner}/${link.repo?.toLowerCase() ?? repo}#${link.issue}` === `${l.owner?.toLowerCase() ?? owner}/${l.repo?.toLowerCase() ?? repo}#${l.issue}`) === i);
 
