@@ -112,6 +112,9 @@ function run() {
                 for (const merge of merges) {
                     const pullRequest = (yield octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
                     const body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
+                    (0, core_1.startGroup)('PR Body');
+                    (0, core_1.debug)((0, util_1.inspect)(body));
+                    (0, core_1.endGroup)();
                     const links = [...body.matchAll(linkRegex)].map(link => link.groups)
                         .filter((link, i, all) => all.findIndex(l => { var _a, _b, _c, _d, _e, _f, _g, _h; return `${(_b = (_a = link.owner) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : owner}/${(_d = (_c = link.repo) === null || _c === void 0 ? void 0 : _c.toLowerCase()) !== null && _d !== void 0 ? _d : repo}#${link.issue}` === `${(_f = (_e = l.owner) === null || _e === void 0 ? void 0 : _e.toLowerCase()) !== null && _f !== void 0 ? _f : owner}/${(_h = (_g = l.repo) === null || _g === void 0 ? void 0 : _g.toLowerCase()) !== null && _h !== void 0 ? _h : repo}#${l.issue}`; }) === i);
                     (0, core_1.startGroup)('Links');

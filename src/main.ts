@@ -99,6 +99,12 @@ async function run(): Promise<void> {
 
         const body = pullRequest.body ?? '';
 
+        startGroup('PR Body');
+
+        debug(inspect(body));
+
+        endGroup();
+
         const links = [...body.matchAll(linkRegex)].map(link => link.groups! as unknown as Link)
 
           .filter((link, i, all) => all.findIndex(l => `${link.owner?.toLowerCase() ?? owner}/${link.repo?.toLowerCase() ?? repo}#${link.issue}` === `${l.owner?.toLowerCase() ?? owner}/${l.repo?.toLowerCase() ?? repo}#${l.issue}`) === i);
