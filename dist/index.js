@@ -59,7 +59,7 @@ const github_1 = __nccwpck_require__(5438);
 const util_1 = __nccwpck_require__(3837);
 const functions_1 = __nccwpck_require__(358);
 function run() {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
@@ -125,10 +125,10 @@ function run() {
                     (0, core_1.debug)((0, util_1.inspect)(links));
                     (0, core_1.endGroup)();
                     for (const link of links) {
-                        const issue = (yield octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
+                        const issue = (yield octokit.rest.issues.get({ owner: (_c = link.owner) !== null && _c !== void 0 ? _c : owner, repo: (_d = link.repo) !== null && _d !== void 0 ? _d : repo, issue_number: +link.issue })).data;
                         if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
                             const { repository } = issue.url.match(issueRegex).groups;
-                            issues.push(Object.assign({ id: `${repository}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_c = issue.body) !== null && _c !== void 0 ? _c : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
+                            issues.push(Object.assign({ id: `${repository}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_e = issue.body) !== null && _e !== void 0 ? _e : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
                                     .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string'),
                                 repository: `${owner}/${repo}`, version })));
                         }
@@ -146,9 +146,9 @@ function run() {
                 (0, core_1.endGroup)();
                 for (const issue of items) {
                     const { repository } = issue.url.match(issueRegex).groups;
-                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_d = issue.body) !== null && _d !== void 0 ? _d : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version, commit: reference });
+                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version, commit: reference });
                     (0, core_1.startGroup)('Issue Body');
-                    (0, core_1.debug)((_e = issue.body) !== null && _e !== void 0 ? _e : '');
+                    (0, core_1.debug)((_g = issue.body) !== null && _g !== void 0 ? _g : '');
                     (0, core_1.endGroup)();
                     (0, core_1.startGroup)('Modified Body');
                     (0, core_1.debug)(body);

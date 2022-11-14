@@ -125,7 +125,7 @@ async function run(): Promise<void> {
 
         for (const link of links) {
 
-          const issue = (await octokit.rest.issues.get({ owner: link.owner, repo: link.repo, issue_number: +link.issue })).data;
+          const issue = (await octokit.rest.issues.get({ owner: link.owner ?? owner, repo: link.repo ?? repo, issue_number: +link.issue })).data;
 
           if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
