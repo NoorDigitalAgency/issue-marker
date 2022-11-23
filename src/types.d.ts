@@ -16,3 +16,9 @@ export interface Link {
   repo: string;
   issue: string;
 }
+
+export enum Phase {
+  before = 'before',
+  after = 'after',
+  jump = 'jump'
+}

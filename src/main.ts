@@ -1,9 +1,9 @@
-import { debug, endGroup, getBooleanInput, getInput, startGroup, warning, info } from '@actions/core';
+import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
-import type { Link } from './types';
+import { Link, Phase } from './types';
 
 async function run(): Promise<void> {
 
@@ -24,6 +24,10 @@ async function run(): Promise<void> {
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 
     const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
+
+    const phase = (getInput('phase') ?? Phase.after) as Phase;
+
+    debug(`Phase: '${phase}'.`);
 
     const version = getInput('version', {required: true});
 
@@ -59,11 +63,13 @@ async function run(): Promise<void> {
 
     if (typeof (stage) === 'undefined') throw new Error('Problem in detecting the stage.');
 
+    if (stage === 'alpha' && phase === Phase.before) return;
+
     const octokit = getOctokit(token);
 
     const issues = new Array<{id: string; body: string; labels: Array<string>}>();
 
-    if (stage === 'alpha') {
+    if (stage === 'alpha' && phase === Phase.after) {
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
@@ -192,7 +198,7 @@ async function run(): Promise<void> {
 
     }
 
-    if (issues.length === 0) throw new Error('No issues to mark.');
+    if (issues.length === 0 && phase === Phase.after) throw new Error('No issues to mark.');
 
     startGroup('Issues');
 
