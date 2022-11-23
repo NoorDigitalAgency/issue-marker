@@ -19,6 +19,10 @@ inputs:
       required: false
       default: 'true'
       description: Close Issues on Merge to Production
+    phase:
+      required: false
+      default: 'after'
+      description: The phase of the release
 runs:
   using: 'node16'
   main: 'dist/index.js'

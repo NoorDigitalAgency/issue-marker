@@ -58,6 +58,7 @@ const exec_1 = __nccwpck_require__(1514);
 const github_1 = __nccwpck_require__(5438);
 const util_1 = __nccwpck_require__(3837);
 const functions_1 = __nccwpck_require__(358);
+const types_1 = __nccwpck_require__(1130);
 function run() {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
@@ -70,6 +71,8 @@ function run() {
             const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
             const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
             const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
+            const phase = (0, core_1.getInput)('phase');
+            (0, core_1.debug)(`Phase: '${phase}'.`);
             const version = (0, core_1.getInput)('version', { required: true });
             (0, core_1.debug)(`Version: '${version}'.`);
             if ([productionRegex, betaRegex, alphaRegex].every(regex => !regex.test(version)))
@@ -90,9 +93,11 @@ function run() {
             (0, core_1.debug)(`Stage: '${stage}'.`);
             if (typeof (stage) === 'undefined')
                 throw new Error('Problem in detecting the stage.');
+            if (stage === 'alpha' && phase === types_1.Phase.before)
+                return;
             const octokit = (0, github_1.getOctokit)(token);
             const issues = new Array();
-            if (stage === 'alpha') {
+            if (stage === 'alpha' && phase === types_1.Phase.after) {
                 const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
                         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
                 if (logOutput.exitCode !== 0)
@@ -145,6 +150,7 @@ function run() {
                 (0, core_1.debug)((0, util_1.inspect)(items));
                 (0, core_1.endGroup)();
                 for (const issue of items) {
+                    (0, core_1.debug)(`Issue ${issue.repository}#${issue.number}`);
                     const { repository } = issue.url.match(issueRegex).groups;
                     const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version, commit: reference });
                     (0, core_1.startGroup)('Issue Body');
@@ -154,14 +160,16 @@ function run() {
                     (0, core_1.debug)(body);
                     (0, core_1.endGroup)();
                     const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
-                    if (branchesOutput.exitCode !== 0)
-                        throw new Error(branchesOutput.stderr);
+                    if (branchesOutput.exitCode !== 0) {
+                        (0, core_1.warning)(`Wrong linking to commit ${commit} from issue ${issue.repository}#${issue.number}.`);
+                        continue;
+                    }
                     const branches = branchesOutput.stdout;
                     if ([...branches.matchAll(branchRegex)].map(branch => branch.groups.branch).includes(currentBranch))
                         issues.push({ id: `${repository}#${issue.number}`, body, labels });
                 }
             }
-            if (issues.length === 0)
+            if (issues.length === 0 && phase === types_1.Phase.after)
                 throw new Error('No issues to mark.');
             (0, core_1.startGroup)('Issues');
             (0, core_1.debug)((0, util_1.inspect)(issues));
@@ -15072,6 +15080,14 @@ function wrappy (fn, cb) {
     return ret
   }
 }
+
+
+/***/ }),
+
+/***/ 1130:
+/***/ ((module) => {
+
+module.exports = eval("require")("./types");
 
 
 /***/ }),

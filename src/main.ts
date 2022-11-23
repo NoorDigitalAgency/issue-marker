@@ -25,7 +25,7 @@ async function run(): Promise<void> {
 
     const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
 
-    const phase = (getInput('phase') ?? Phase.after) as Phase;
+    const phase = getInput('phase');
 
     debug(`Phase: '${phase}'.`);
 
@@ -171,6 +171,8 @@ async function run(): Promise<void> {
 
       for (const issue of items) {
 
+        debug(`Issue ${issue.repository}#${issue.number}`);
+
         const { repository } = issue.url.match(issueRegex)!.groups!;
 
         const {body, commit, labels} = getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version, commit: reference});
@@ -189,7 +191,12 @@ async function run(): Promise<void> {
 
         const branchesOutput = await getExecOutput('git', ['branch', '-r', '--contains', commit]);
 
-        if (branchesOutput.exitCode !== 0) throw new Error(branchesOutput.stderr);
+        if (branchesOutput.exitCode !== 0) {
+
+          warning(`Wrong linking to commit ${commit} from issue ${issue.repository}#${issue.number}.`);
+
+          continue;
+        }
 
         const branches = branchesOutput.stdout;
 
