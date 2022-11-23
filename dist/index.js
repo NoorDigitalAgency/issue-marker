@@ -58,10 +58,15 @@ const exec_1 = __nccwpck_require__(1514);
 const github_1 = __nccwpck_require__(5438);
 const util_1 = __nccwpck_require__(3837);
 const functions_1 = __nccwpck_require__(358);
-const types_1 = __nccwpck_require__(1130);
 function run() {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
+        let Phase;
+        (function (Phase) {
+            Phase["before"] = "before";
+            Phase["after"] = "after";
+            Phase["jump"] = "jump";
+        })(Phase || (Phase = {}));
         try {
             const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
             const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/;
@@ -93,11 +98,11 @@ function run() {
             (0, core_1.debug)(`Stage: '${stage}'.`);
             if (typeof (stage) === 'undefined')
                 throw new Error('Problem in detecting the stage.');
-            if (stage === 'alpha' && phase === types_1.Phase.before)
+            if (stage === 'alpha' && phase === Phase.before)
                 return;
             const octokit = (0, github_1.getOctokit)(token);
             const issues = new Array();
-            if (stage === 'alpha' && phase === types_1.Phase.after) {
+            if (stage === 'alpha' && phase === Phase.after) {
                 const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
                         version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
                 if (logOutput.exitCode !== 0)
@@ -169,7 +174,7 @@ function run() {
                         issues.push({ id: `${repository}#${issue.number}`, body, labels });
                 }
             }
-            if (issues.length === 0 && phase === types_1.Phase.after)
+            if (issues.length === 0 && phase === Phase.after)
                 throw new Error('No issues to mark.');
             (0, core_1.startGroup)('Issues');
             (0, core_1.debug)((0, util_1.inspect)(issues));
@@ -15080,14 +15085,6 @@ function wrappy (fn, cb) {
     return ret
   }
 }
-
-
-/***/ }),
-
-/***/ 1130:
-/***/ ((module) => {
-
-module.exports = eval("require")("./types");
 
 
 /***/ }),

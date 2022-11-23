@@ -3,9 +3,15 @@ import { getExecOutput } from '@actions/exec';
 import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
-import { Link, Phase } from './types';
+import type { Link } from './types';
 
 async function run(): Promise<void> {
+
+  enum Phase {
+    before = 'before',
+    after = 'after',
+    jump = 'jump'
+  }
 
   try {
 
@@ -25,7 +31,7 @@ async function run(): Promise<void> {
 
     const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
 
-    const phase = getInput('phase');
+    const phase = getInput('phase') as Phase;
 
     debug(`Phase: '${phase}'.`);
 
