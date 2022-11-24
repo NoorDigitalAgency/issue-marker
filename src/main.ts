@@ -4,6 +4,7 @@ import { context, getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { getIssueMetadata } from './functions';
 import type { Link } from './types';
+import {ZenHubClient} from "./zenhub-client";
 
 async function run(): Promise<void> {
 
@@ -253,4 +254,22 @@ async function run(): Promise<void> {
   }
 }
 
-run();
+const octokit = getOctokit('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');
+
+ZenHubClient.getGitHubRepositoryId('NoorDigitalAgency', 'office-ledigajobb-ui', octokit.graphql).then(value => {
+
+  const v = value;
+
+  debugger;
+});
+
+const client = new ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e');
+
+client.getColumnIssues('production').then(value => {
+
+  const zenHubColumn = value;
+
+  debugger;
+});
+
+//run();
