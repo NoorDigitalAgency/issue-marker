@@ -204,14 +204,15 @@ function run() {
         }
     });
 }
-const octokit = (0, github_1.getOctokit)('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');
-zenhub_client_1.ZenHubClient.getGitHubRepositoryId('NoorDigitalAgency', 'office-ledigajobb-ui', octokit.graphql).then(value => {
+const token = process.env.GITHUB_PAT;
+const octokit = (0, github_1.getOctokit)(token);
+const client = new zenhub_client_1.ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e', octokit);
+client.getGitHubRepositoryId('NoorDigitalAgency', 'ledigajobb-general').then(value => {
     const v = value;
     debugger;
 });
-const client = new zenhub_client_1.ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e');
-client.getColumnIssues('production').then(value => {
-    const zenHubColumn = value;
+client.getGitHubIssueId('NoorDigitalAgency', 'ledigajobb-general', 920).then(value => {
+    const v = value;
     debugger;
 });
 //run();
@@ -241,9 +242,10 @@ exports.ZenHubClient = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const core_1 = __nccwpck_require__(2186);
 class ZenHubClient {
-    constructor(key, workspaceId) {
+    constructor(key, workspaceId, octokit) {
         this.key = key;
         this.workspaceId = workspaceId;
+        this.octokit = octokit;
         this.config = {
             url: 'https://api.zenhub.com/public/graphql',
             headers: {
@@ -348,9 +350,10 @@ class ZenHubClient {
             return issues;
         });
     }
-    static getGitHubRepositoryId(owner, repo, graphqlClient) {
+    getGitHubRepositoryId(owner, repo) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const response = (yield graphqlClient(`
+            const response = (yield this.octokit.graphql(`
             query repositoryId($owner: String!, $repo: String!) {
               organization(login: $owner){
                 repository(name: $repo){
@@ -360,8 +363,24 @@ class ZenHubClient {
             }
         `, { owner, repo }));
             const base64 = response.organization.repository.id;
-            const code = new Buffer(base64, 'base64').toString('ascii').split('010:Repository').pop();
-            return code;
+            return +((_a = new Buffer(base64, 'base64').toString('ascii').split('010:Repository').pop()) !== null && _a !== void 0 ? _a : '0');
+        });
+    }
+    getGitHubIssueId(owner, repo, number) {
+        var _a, _b;
+        return __awaiter(this, void 0, void 0, function* () {
+            const id = yield this.getGitHubRepositoryId(owner, repo);
+            const query = `
+            query issue($id: Int!, $number: Int!)
+            {
+              issueByInfo(repositoryGhId: $id, issueNumber: $number){
+                id
+              }
+            }
+        `;
+            const variables = { id, number };
+            const data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+            return (_b = data === null || data === void 0 ? void 0 : data.issueByInfo) === null || _b === void 0 ? void 0 : _b.id;
         });
     }
 }

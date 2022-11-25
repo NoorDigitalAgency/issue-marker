@@ -1,6 +1,6 @@
 import axios, {AxiosRequestConfig} from 'axios';
 import {debug} from "@actions/core";
-import type {graphql} from '@octokit/graphql';
+import type {GitHub} from "@actions/github/lib/utils";
 
 export interface ZenHubColumn {
     name: string;
@@ -37,7 +37,7 @@ export class ZenHubClient {
 
     private columns?: Array<ZenHubColumn>;
 
-    constructor(private key: string, private workspaceId: string) {
+    constructor(private key: string, private workspaceId: string, private octokit: InstanceType<typeof GitHub>) {
 
         debug(`Workspace Id: ${workspaceId}`);
     }
@@ -171,9 +171,9 @@ export class ZenHubClient {
         return issues;
     }
 
-    public static async getGitHubRepositoryId(owner: string, repo: string, graphqlClient: typeof graphql) {
+    public async getGitHubRepositoryId(owner: string, repo: string) {
 
-        const response = (await graphqlClient(`
+        const response = (await this.octokit.graphql(`
             query repositoryId($owner: String!, $repo: String!) {
               organization(login: $owner){
                 repository(name: $repo){
@@ -185,8 +185,26 @@ export class ZenHubClient {
 
         const base64 = response.organization.repository.id;
 
-        const code = new Buffer(base64, 'base64').toString('ascii').split('010:Repository').pop();
+        return +(new Buffer(base64, 'base64').toString('ascii').split('010:Repository').pop() ?? '0');
+    }
 
-        return code;
+    public async getGitHubIssueId(owner: string, repo: string, number: number) {
+
+        const id = await this.getGitHubRepositoryId(owner, repo);
+
+        const query = `
+            query issue($id: Int!, $number: Int!)
+            {
+              issueByInfo(repositoryGhId: $id, issueNumber: $number){
+                id
+              }
+            }
+        `;
+
+        const variables = { id, number } as {id: number; number: number};
+
+        const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
+
+        return data?.issueByInfo?.id;
     }
 }

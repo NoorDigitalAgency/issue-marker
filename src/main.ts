@@ -254,22 +254,26 @@ async function run(): Promise<void> {
   }
 }
 
-const octokit = getOctokit('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');
+const token = process.env.GITHUB_PAT;
 
-ZenHubClient.getGitHubRepositoryId('NoorDigitalAgency', 'office-ledigajobb-ui', octokit.graphql).then(value => {
+const octokit = getOctokit(token!);
+
+const client = new ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e', octokit);
+
+client.getGitHubRepositoryId('NoorDigitalAgency', 'ledigajobb-general').then(value => {
 
   const v = value;
 
   debugger;
+
 });
 
-const client = new ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e');
+client.getGitHubIssueId('NoorDigitalAgency', 'ledigajobb-general', 920).then(value => {
 
-client.getColumnIssues('production').then(value => {
-
-  const zenHubColumn = value;
+  const v = value;
 
   debugger;
+
 });
 
 //run();
