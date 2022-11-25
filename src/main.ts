@@ -8,12 +8,6 @@ import {ZenHubClient} from "./zenhub-client";
 
 async function run(): Promise<void> {
 
-  enum Phase {
-    before = 'before',
-    after = 'after',
-    jump = 'jump'
-  }
-
   try {
 
     const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
@@ -31,10 +25,6 @@ async function run(): Promise<void> {
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 
     const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
-
-    const phase = getInput('phase') as Phase;
-
-    debug(`Phase: '${phase}'.`);
 
     const version = getInput('version', {required: true});
 
@@ -64,19 +54,28 @@ async function run(): Promise<void> {
 
     debug(`Close Issue: ${close}.`);
 
+    const zenHubKey = getInput('zenhub-key');
+
+    debug(`ZenHub Key: '${zenHubKey}'.`);
+
+    const zenHubWorkspace = getInput('zenhub-workspace');
+
+    debug(`ZenHub Workspace: '${zenHubWorkspace}'.`);
+
     const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
 
     debug(`Stage: '${stage}'.`);
 
     if (typeof (stage) === 'undefined') throw new Error('Problem in detecting the stage.');
 
-    if (stage === 'alpha' && phase === Phase.before) return;
-
     const octokit = getOctokit(token);
+
+    // TODO: Use the client to move the issues
+    const client = new ZenHubClient(zenHubKey, zenHubWorkspace, octokit);
 
     const issues = new Array<{id: string; body: string; labels: Array<string>}>();
 
-    if (stage === 'alpha' && phase === Phase.after) {
+    if (stage === 'alpha') {
 
       const logOutput = await getExecOutput('git', ['log', previousVersion ? `${previousVersion}...${version}` :
 
@@ -212,7 +211,7 @@ async function run(): Promise<void> {
 
     }
 
-    if (issues.length === 0 && phase === Phase.after) throw new Error('No issues to mark.');
+    if (issues.length === 0) throw new Error('No issues to mark.');
 
     startGroup('Issues');
 
@@ -254,26 +253,4 @@ async function run(): Promise<void> {
   }
 }
 
-const token = process.env.GITHUB_PAT;
-
-const octokit = getOctokit(token!);
-
-const client = new ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e', octokit);
-
-client.getGitHubRepositoryId('NoorDigitalAgency', 'ledigajobb-general').then(value => {
-
-  const v = value;
-
-  debugger;
-
-});
-
-client.getGitHubIssueId('NoorDigitalAgency', 'ledigajobb-general', 920).then(value => {
-
-  const v = value;
-
-  debugger;
-
-});
-
-//run();
+run();

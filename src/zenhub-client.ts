@@ -2,7 +2,7 @@ import axios, {AxiosRequestConfig} from 'axios';
 import {debug} from "@actions/core";
 import type {GitHub} from "@actions/github/lib/utils";
 
-export interface ZenHubColumn {
+export interface ZenHubPipeline {
     name: string;
     id: string;
 }
@@ -35,20 +35,18 @@ export class ZenHubClient {
 
     } as AxiosRequestConfig;
 
-    private columns?: Array<ZenHubColumn>;
+    private pipelines?: Array<ZenHubPipeline>;
 
     constructor(private key: string, private workspaceId: string, private octokit: InstanceType<typeof GitHub>) {
 
         debug(`Workspace Id: ${workspaceId}`);
     }
 
-    public async getColumns(): Promise<ZenHubColumn[]> {
+    public async getPipelines(): Promise<ZenHubPipeline[]> {
 
-        if (Array.isArray(this.columns)) {
+        if (Array.isArray(this.pipelines)) {
 
-            debugger;
-
-            return this.columns;
+            return this.pipelines;
         }
 
         const query = `
@@ -75,7 +73,7 @@ export class ZenHubClient {
 
         let count = 0;
 
-        const columns = new Array<ZenHubColumn>();
+        const pipelines = new Array<ZenHubPipeline>();
 
         do {
 
@@ -87,23 +85,23 @@ export class ZenHubClient {
 
             count = data?.workspace?.pipelinesConnection?.totalCount ?? 0;
 
-            ((data?.workspace?.pipelinesConnection?.nodes ?? []) as Array<ZenHubColumn>).forEach(column => columns.push(column));
+            ((data?.workspace?.pipelinesConnection?.nodes ?? []) as Array<ZenHubPipeline>).forEach(pipeline => pipelines.push(pipeline));
 
         } while (data?.workspace?.pipelinesConnection?.pageInfo?.hasNextPage === true);
 
-        if (columns.length !== count) {
+        if (pipelines.length !== count) {
 
-            throw new Error(`Expected ${count} columns but queried ${columns.length}.`);
+            throw new Error(`Expected ${count} pipelines but queried ${pipelines.length}.`);
         }
 
-        this.columns = columns;
+        this.pipelines = pipelines;
 
-        return columns;
+        return pipelines;
     }
 
-    public async getColumn(name: string): Promise<ZenHubColumn> {
+    public async getPipeline(name: string): Promise<ZenHubPipeline> {
 
-        const columns = await this.getColumns();
+        const columns = await this.getPipelines();
 
         const zenHubColumn = columns.find(column => column.name.toLowerCase() === name.toLowerCase());
 
@@ -115,9 +113,9 @@ export class ZenHubClient {
         return zenHubColumn;
     }
 
-    public async getColumnIssues(name: string): Promise<ZenHubIssue[]> {
+    public async getPipelineIssues(name: string): Promise<ZenHubIssue[]> {
 
-        const column = await this.getColumn(name);
+        const pipeline = await this.getPipeline(name);
 
         const query = `
             query pipelineIssues($id: ID!, $cursor: String) {
@@ -151,7 +149,7 @@ export class ZenHubClient {
 
         do {
 
-            const variables = { id: column.id, cursor } as {id: string; cursor?: string};
+            const variables = { id: pipeline.id, cursor } as {id: string; cursor?: string};
 
             data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
 
@@ -171,7 +169,7 @@ export class ZenHubClient {
         return issues;
     }
 
-    public async getGitHubRepositoryId(owner: string, repo: string) {
+    public async getGitHubRepositoryId(owner: string, repo: string): Promise<number> {
 
         const response = (await this.octokit.graphql(`
             query repositoryId($owner: String!, $repo: String!) {
@@ -188,7 +186,7 @@ export class ZenHubClient {
         return +(new Buffer(base64, 'base64').toString('ascii').split('010:Repository').pop() ?? '0');
     }
 
-    public async getGitHubIssueId(owner: string, repo: string, number: number) {
+    public async getGitHubIssueId(owner: string, repo: string, number: number): Promise<string> {
 
         const id = await this.getGitHubRepositoryId(owner, repo);
 
@@ -205,6 +203,30 @@ export class ZenHubClient {
 
         const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
 
-        return data?.issueByInfo?.id;
+        return data?.issueByInfo?.id as string;
+    }
+
+    public async moveIssue(issue: string, pipeline: string): Promise<void> {
+
+        const query = `
+            mutation moveIssue($issue: ID!, $pipeline: ID!) {
+              moveIssue(input: { issueId: $issue, pipelineId: $pipeline }) {
+                clientMutationId
+              }
+            }
+        `;
+
+        const variables = { issue, pipeline } as {issue: string; pipeline: string};
+
+        await axios.post(this.config.url!, { query, variables }, this.config);
+    }
+
+    public async moveGitHubIssue(owner: string, repo: string, number: number, pipeline: string): Promise<void> {
+
+        const issueId = await this.getGitHubIssueId(owner, repo, number);
+
+        const pipelineId = (await this.getPipeline(pipeline)).id;
+
+        await this.moveIssue(issueId, pipelineId);
     }
 }

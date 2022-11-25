@@ -207,14 +207,15 @@ function run() {
 const token = process.env.GITHUB_PAT;
 const octokit = (0, github_1.getOctokit)(token);
 const client = new zenhub_client_1.ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e', octokit);
-client.getGitHubRepositoryId('NoorDigitalAgency', 'ledigajobb-general').then(value => {
-    const v = value;
-    debugger;
-});
-client.getGitHubIssueId('NoorDigitalAgency', 'ledigajobb-general', 920).then(value => {
-    const v = value;
-    debugger;
-});
+client.getPipelines().then((pipelines) => __awaiter(void 0, void 0, void 0, function* () {
+    for (const pipeline of pipelines) {
+        const issues = yield client.getPipelineIssues(pipeline.name);
+        for (const issue of issues) {
+            const id = yield client.getGitHubIssueId(issue.repository.ownerName, issue.repository.name, issue.number);
+            console.log(`${id} ${issue.repository.ownerName}/${issue.repository.name}#${issue.number} (${issue.title})`);
+        }
+    }
+}));
 //run();
 
 
@@ -256,12 +257,11 @@ class ZenHubClient {
         };
         (0, core_1.debug)(`Workspace Id: ${workspaceId}`);
     }
-    getColumns() {
+    getPipelines() {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
         return __awaiter(this, void 0, void 0, function* () {
-            if (Array.isArray(this.columns)) {
-                debugger;
-                return this.columns;
+            if (Array.isArray(this.pipelines)) {
+                return this.pipelines;
             }
             const query = `
             query workspacePipelines($id: ID!, $cursor: String) {
@@ -283,24 +283,24 @@ class ZenHubClient {
             let data;
             let cursor = null;
             let count = 0;
-            const columns = new Array();
+            const pipelines = new Array();
             do {
                 const variables = { id: this.workspaceId, cursor };
                 data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
                 cursor = (_d = (_c = (_b = data === null || data === void 0 ? void 0 : data.workspace) === null || _b === void 0 ? void 0 : _b.pipelinesConnection) === null || _c === void 0 ? void 0 : _c.pageInfo) === null || _d === void 0 ? void 0 : _d.endCursor;
                 count = (_g = (_f = (_e = data === null || data === void 0 ? void 0 : data.workspace) === null || _e === void 0 ? void 0 : _e.pipelinesConnection) === null || _f === void 0 ? void 0 : _f.totalCount) !== null && _g !== void 0 ? _g : 0;
-                ((_k = (_j = (_h = data === null || data === void 0 ? void 0 : data.workspace) === null || _h === void 0 ? void 0 : _h.pipelinesConnection) === null || _j === void 0 ? void 0 : _j.nodes) !== null && _k !== void 0 ? _k : []).forEach(column => columns.push(column));
+                ((_k = (_j = (_h = data === null || data === void 0 ? void 0 : data.workspace) === null || _h === void 0 ? void 0 : _h.pipelinesConnection) === null || _j === void 0 ? void 0 : _j.nodes) !== null && _k !== void 0 ? _k : []).forEach(pipeline => pipelines.push(pipeline));
             } while (((_o = (_m = (_l = data === null || data === void 0 ? void 0 : data.workspace) === null || _l === void 0 ? void 0 : _l.pipelinesConnection) === null || _m === void 0 ? void 0 : _m.pageInfo) === null || _o === void 0 ? void 0 : _o.hasNextPage) === true);
-            if (columns.length !== count) {
-                throw new Error(`Expected ${count} columns but queried ${columns.length}.`);
+            if (pipelines.length !== count) {
+                throw new Error(`Expected ${count} pipelines but queried ${pipelines.length}.`);
             }
-            this.columns = columns;
-            return columns;
+            this.pipelines = pipelines;
+            return pipelines;
         });
     }
-    getColumn(name) {
+    getPipeline(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            const columns = yield this.getColumns();
+            const columns = yield this.getPipelines();
             const zenHubColumn = columns.find(column => column.name.toLowerCase() === name.toLowerCase());
             if (zenHubColumn == null) {
                 throw new Error(`Column ${name} not found.`);
@@ -308,10 +308,10 @@ class ZenHubClient {
             return zenHubColumn;
         });
     }
-    getColumnIssues(name) {
+    getPipelineIssues(name) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         return __awaiter(this, void 0, void 0, function* () {
-            const column = yield this.getColumn(name);
+            const pipeline = yield this.getPipeline(name);
             const query = `
             query pipelineIssues($id: ID!, $cursor: String) {
               searchIssuesByPipeline(pipelineId: $id, after: $cursor, first: 50, filters: { displayType: issues }) {
@@ -338,7 +338,7 @@ class ZenHubClient {
             let count = 0;
             const issues = new Array();
             do {
-                const variables = { id: column.id, cursor };
+                const variables = { id: pipeline.id, cursor };
                 data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
                 cursor = (_c = (_b = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _b === void 0 ? void 0 : _b.pageInfo) === null || _c === void 0 ? void 0 : _c.endCursor;
                 count = (_e = (_d = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _d === void 0 ? void 0 : _d.totalCount) !== null && _e !== void 0 ? _e : 0;
@@ -381,6 +381,26 @@ class ZenHubClient {
             const variables = { id, number };
             const data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
             return (_b = data === null || data === void 0 ? void 0 : data.issueByInfo) === null || _b === void 0 ? void 0 : _b.id;
+        });
+    }
+    moveIssue(issue, pipeline) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `
+            mutation moveIssue($issue: ID!, $pipeline: ID!) {
+              moveIssue(input: { issueId: $issue, pipelineId: $pipeline }) {
+                clientMutationId
+              }
+            }
+        `;
+            const variables = { issue, pipeline };
+            yield axios_1.default.post(this.config.url, { query, variables }, this.config);
+        });
+    }
+    moveGitHubIssue(owner, repo, number, pipeline) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const issueId = yield this.getGitHubIssueId(owner, repo, number);
+            const pipelineId = (yield this.getPipeline(pipeline)).id;
+            yield this.moveIssue(issueId, pipelineId);
         });
     }
 }
