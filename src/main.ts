@@ -1,7 +1,7 @@
 import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getOctokit } from '@actions/github';
 import { inspect } from 'util';
-import {deconstructIssue, getTargetIssues} from './functions';
+import {deconstructIssue, getTargetIssues, refineLabels} from './functions';
 import {ZenHubClient} from "./zenhub-client";
 
 async function run(): Promise<void> {
@@ -61,7 +61,7 @@ async function run(): Promise<void> {
     // TODO: Use the client to move the issues
     const client = new ZenHubClient(zenHubKey, zenHubWorkspace, octokit);
 
-    const issues = await getTargetIssues(stage!, version, previousVersion, reference, octokit);
+    const issues = (await getTargetIssues(stage!, version, previousVersion, reference, octokit)).map(issue => ({...issue, labels: refineLabels(issue.labels, issue.body, stage!)}));
 
     if (issues.length === 0) throw new Error('No issues to mark.');
 
@@ -77,7 +77,11 @@ async function run(): Promise<void> {
 
         const {owner, repo, number} = deconstructIssue(issue);
 
-        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined});
+        const needsTest = issue.labels.map(label => label.trim().toLowerCase()).includes('test');
+
+        await client.moveGitHubIssue(owner, repo, +number, stage!);
+
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && !needsTest && stage === 'production' ? 'closed' : undefined});
 
       } catch (error) {
 

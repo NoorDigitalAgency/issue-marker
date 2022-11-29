@@ -12,9 +12,9 @@ const closerComment = '<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->';
 
 const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-marker">.*?\`\`\`yaml\\s+(?<yaml>.*?)\\s+\`\`\`.*?<\\/details>(?:\\s*${closerComment})?\\s+`, 'ims');
 
-export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<string>; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; labels: Array<string>; body: string; version: string; commit: string}) {
+export function getIssueMetadata (configuration: {stage: 'alpha'; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; body: string; version: string; commit: string}) {
 
-    const { stage, labels, body } = {...configuration};
+    const { stage, body } = {...configuration};
 
     const metadataYaml = (body ?? '').match(regex)?.groups?.yaml;
 
@@ -42,9 +42,7 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; labels: Array<
 
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summarizeMetadata(dump(metadata, {forceQuotes: true, quotingType: "'"}))}\n\n`;
 
-    const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
-
-    return { body: outputBody, labels: outputLabels, commit };
+    return { body: outputBody, commit };
 }
 
 function summarizeMetadata (metadata: string) {
@@ -82,7 +80,12 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         const merges = [...(log.matchAll(logRegex) ?? [])].map(merge => ({hash: merge.groups!.hash!, number: +merge.groups!.number!}));
 
-        if (merges.length === 0) throw new Error('No merges found.');
+        if (merges.length === 0) {
+
+            warning('No merges found.');
+
+            return [];
+        }
 
         const owner = context.repo.owner;
 
@@ -136,11 +139,11 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
                         id: `${repository}#${link.issue}`,
 
-                        ...getIssueMetadata({stage, body: issue.body ?? '', commit: merge.hash, labels: issue.labels.filter(label => typeof(label) === 'string' ? label : label.name)
+                        ...getIssueMetadata({stage, body: issue.body ?? '', commit: merge.hash, repository: `${owner}/${repo}`, version}),
 
-                                .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>,
+                        labels: issue.labels.filter(label => typeof(label) === 'string' ? label : label.name)
 
-                            repository: `${owner}/${repo}`, version})
+                            .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>
                     });
                 }
             }
@@ -170,7 +173,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             const { repository } = issue.url.match(issueRegex)!.groups!;
 
-            const {body, commit, labels} = getIssueMetadata({stage, body: issue.body ?? '', labels: issue.labels.map(label => label.name ?? '').filter(label => label !== ''), version, commit: reference});
+            const {body, commit} = getIssueMetadata({stage, body: issue.body ?? '', version, commit: reference});
 
             startGroup('Issue Body');
 
@@ -195,6 +198,8 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             const branches = branchesOutput.stdout;
 
+            const labels = issue.labels.map(label => label.name ?? '').filter(label => label !== '');
+
             if ([...branches.matchAll(branchRegex)].map(branch => branch.groups!.branch).includes(currentBranch)) issues.push({id: `${repository}#${issue.number}`, body, labels});
         }
     }
@@ -207,4 +212,13 @@ export function deconstructIssue(issue: {id: string; body: string; labels: Array
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 
     return issue.id.match(idRegex)!.groups! as {owner: string; repo: string; number: string};
+}
+
+export function refineLabels(labels: Array<string>, body: string, stage: string): Array<string> {
+
+    const testStageRegex = new RegExp(`^ *- +\\[x] +${stage}$`, 'im');
+
+    const needsTest = testStageRegex.test(body);
+
+    return labels.filter(label => !['alpha', 'beta', 'production', 'test', 'approved'].includes(label)).concat([stage, ...(needsTest ? ['test'] : [])]);
 }
