@@ -19,10 +19,14 @@ inputs:
       required: false
       default: 'true'
       description: Close Issues on Merge to Production
-    phase:
+    zenhub-key:
+      default: ''
       required: false
-      default: 'after'
-      description: The phase of the release
+      description: ZenHub's API Key
+    zenhub-workspace:
+      default: ''
+      required: false
+      description: ZenHub's Workspace Id
 runs:
   using: 'node16'
   main: 'dist/index.js'
