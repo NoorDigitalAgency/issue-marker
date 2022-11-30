@@ -2,19 +2,32 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
 /***/ 358:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getIssueMetadata = void 0;
+exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getIssueMetadata = void 0;
 const js_yaml_1 = __nccwpck_require__(1917);
+const exec_1 = __nccwpck_require__(1514);
+const core_1 = __nccwpck_require__(2186);
+const github_1 = __nccwpck_require__(5438);
+const util_1 = __nccwpck_require__(3837);
 const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 const closerComment = '<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->';
 const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-marker">.*?\`\`\`yaml\\s+(?<yaml>.*?)\\s+\`\`\`.*?<\\/details>(?:\\s*${closerComment})?\\s+`, 'ims');
 function getIssueMetadata(configuration) {
     var _a, _b, _c, _d;
-    const { stage, labels, body } = Object.assign({}, configuration);
+    const { stage, body } = Object.assign({}, configuration);
     const metadataYaml = (_b = (_a = (body !== null && body !== void 0 ? body : '').match(regex)) === null || _a === void 0 ? void 0 : _a.groups) === null || _b === void 0 ? void 0 : _b.yaml;
     if (stage !== 'alpha' && !metadataYaml) {
         throw new Error();
@@ -27,13 +40,109 @@ function getIssueMetadata(configuration) {
         metadata.history = [{ version: configuration.version, commit: configuration.commit }, ...history];
     }
     const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body !== null && body !== void 0 ? body : ''}\n\n${summarizeMetadata((0, js_yaml_1.dump)(metadata, { forceQuotes: true, quotingType: "'" }))}\n\n`;
-    const outputLabels = labels.filter(label => !['alpha', 'beta', 'production'].includes(label)).concat([stage]);
-    return { body: outputBody, labels: outputLabels, commit };
+    return { body: outputBody, commit };
 }
 exports.getIssueMetadata = getIssueMetadata;
 function summarizeMetadata(metadata) {
     return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
+function getTargetIssues(stage, version, previousVersion, reference, octokit) {
+    var _a, _b, _c, _d, _e, _f, _g;
+    return __awaiter(this, void 0, void 0, function* () {
+        const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
+        const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
+        const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
+        const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
+        const issues = new Array();
+        if (stage === 'alpha') {
+            const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
+                    version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
+            if (logOutput.exitCode !== 0)
+                throw new Error(logOutput.stderr);
+            const log = logOutput.stdout;
+            (0, core_1.startGroup)('Log Output');
+            (0, core_1.debug)(log);
+            (0, core_1.endGroup)();
+            const merges = [...((_a = log.matchAll(logRegex)) !== null && _a !== void 0 ? _a : [])].map(merge => ({ hash: merge.groups.hash, number: +merge.groups.number }));
+            if (merges.length === 0) {
+                (0, core_1.warning)('No merges found.');
+                return [];
+            }
+            const owner = github_1.context.repo.owner;
+            const repo = github_1.context.repo.repo;
+            (0, core_1.startGroup)('Repo Object');
+            (0, core_1.debug)((0, util_1.inspect)(github_1.context.repo));
+            (0, core_1.endGroup)();
+            for (const merge of merges) {
+                const pullRequest = (yield octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
+                const body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
+                (0, core_1.startGroup)('PR Body');
+                (0, core_1.debug)((0, util_1.inspect)(body));
+                (0, core_1.endGroup)();
+                const linkGroups = [...body.matchAll(linkRegex)].map(link => link.groups);
+                (0, core_1.startGroup)('Link Groups');
+                (0, core_1.debug)((0, util_1.inspect)(linkGroups));
+                (0, core_1.endGroup)();
+                const links = linkGroups
+                    .filter((link, i, all) => all.findIndex(l => { var _a, _b, _c, _d, _e, _f, _g, _h; return `${(_b = (_a = link.owner) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : owner}/${(_d = (_c = link.repo) === null || _c === void 0 ? void 0 : _c.toLowerCase()) !== null && _d !== void 0 ? _d : repo}#${link.issue}` === `${(_f = (_e = l.owner) === null || _e === void 0 ? void 0 : _e.toLowerCase()) !== null && _f !== void 0 ? _f : owner}/${(_h = (_g = l.repo) === null || _g === void 0 ? void 0 : _g.toLowerCase()) !== null && _h !== void 0 ? _h : repo}#${l.issue}`; }) === i);
+                (0, core_1.startGroup)('Links');
+                (0, core_1.debug)((0, util_1.inspect)(links));
+                (0, core_1.endGroup)();
+                for (const link of links) {
+                    const issue = (yield octokit.rest.issues.get({ owner: (_c = link.owner) !== null && _c !== void 0 ? _c : owner, repo: (_d = link.repo) !== null && _d !== void 0 ? _d : repo, issue_number: +link.issue })).data;
+                    if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
+                        const { repository } = issue.url.match(issueRegex).groups;
+                        issues.push(Object.assign(Object.assign({ id: `${repository}#${link.issue}` }, getIssueMetadata({ stage, body: (_e = issue.body) !== null && _e !== void 0 ? _e : '', commit: merge.hash, repository: `${owner}/${repo}`, version })), { labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
+                                .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string') }));
+                    }
+                }
+            }
+        }
+        else if (stage === 'production' || stage === 'beta') {
+            const currentBranch = stage === 'production' ? 'main' : 'release';
+            const filterLabel = stage === 'production' ? 'beta' : 'alpha';
+            const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
+            (0, core_1.debug)(`Query: ${query}`);
+            const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+            (0, core_1.startGroup)('Query Items');
+            (0, core_1.debug)((0, util_1.inspect)(items));
+            (0, core_1.endGroup)();
+            for (const issue of items) {
+                (0, core_1.debug)(`Issue ${issue.repository}#${issue.number}`);
+                const { repository } = issue.url.match(issueRegex).groups;
+                const { body, commit } = getIssueMetadata({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', version, commit: reference });
+                (0, core_1.startGroup)('Issue Body');
+                (0, core_1.debug)((_g = issue.body) !== null && _g !== void 0 ? _g : '');
+                (0, core_1.endGroup)();
+                (0, core_1.startGroup)('Modified Body');
+                (0, core_1.debug)(body);
+                (0, core_1.endGroup)();
+                const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
+                if (branchesOutput.exitCode !== 0) {
+                    (0, core_1.warning)(`Wrong linking to commit ${commit} from issue ${issue.repository}#${issue.number}.`);
+                    continue;
+                }
+                const branches = branchesOutput.stdout;
+                const labels = issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== '');
+                if ([...branches.matchAll(branchRegex)].map(branch => branch.groups.branch).includes(currentBranch))
+                    issues.push({ id: `${repository}#${issue.number}`, body, labels });
+            }
+        }
+        return issues;
+    });
+}
+exports.getTargetIssues = getTargetIssues;
+function deconstructIssueId(issue) {
+    const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
+    return issue.id.match(idRegex).groups;
+}
+exports.deconstructIssueId = deconstructIssueId;
+function refineLabels(labels, body, stage) {
+    const testStageRegex = new RegExp(`^ *- +\\[x] +${stage} *$`, 'im');
+    const needsTest = testStageRegex.test(body);
+    return labels.filter(label => !['alpha', 'beta', 'production', 'test', 'approved'].includes(label)).concat([stage, ...(needsTest ? ['test'] : [])]);
+}
+exports.refineLabels = refineLabels;
 
 
 /***/ }),
@@ -54,31 +163,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core_1 = __nccwpck_require__(2186);
-const exec_1 = __nccwpck_require__(1514);
 const github_1 = __nccwpck_require__(5438);
 const util_1 = __nccwpck_require__(3837);
 const functions_1 = __nccwpck_require__(358);
 const zenhub_client_1 = __nccwpck_require__(4304);
 function run() {
-    var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
-        let Phase;
-        (function (Phase) {
-            Phase["before"] = "before";
-            Phase["after"] = "after";
-            Phase["jump"] = "jump";
-        })(Phase || (Phase = {}));
         try {
             const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
             const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/;
             const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
-            const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
-            const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
-            const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
-            const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
-            const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
-            const phase = (0, core_1.getInput)('phase');
-            (0, core_1.debug)(`Phase: '${phase}'.`);
             const version = (0, core_1.getInput)('version', { required: true });
             (0, core_1.debug)(`Version: '${version}'.`);
             if ([productionRegex, betaRegex, alphaRegex].every(regex => !regex.test(version)))
@@ -95,95 +189,30 @@ function run() {
             (0, core_1.debug)(`Reference: '${reference}'.`);
             const close = (0, core_1.getBooleanInput)('close-issues');
             (0, core_1.debug)(`Close Issue: ${close}.`);
+            const zenHubKey = (0, core_1.getInput)('zenhub-key');
+            (0, core_1.debug)(`ZenHub Key: '${zenHubKey}'.`);
+            const zenHubWorkspace = (0, core_1.getInput)('zenhub-workspace');
+            (0, core_1.debug)(`ZenHub Workspace: '${zenHubWorkspace}'.`);
             const stage = productionRegex.test(version) ? 'production' : betaRegex.test(version) ? 'beta' : alphaRegex.test(version) ? 'alpha' : null;
             (0, core_1.debug)(`Stage: '${stage}'.`);
             if (typeof (stage) === 'undefined')
                 throw new Error('Problem in detecting the stage.');
-            if (stage === 'alpha' && phase === Phase.before)
-                return;
             const octokit = (0, github_1.getOctokit)(token);
-            const issues = new Array();
-            if (stage === 'alpha' && phase === Phase.after) {
-                const logOutput = yield (0, exec_1.getExecOutput)('git', ['log', previousVersion ? `${previousVersion}...${version}` :
-                        version, '--reverse', '--merges', '--oneline', '--no-abbrev-commit']);
-                if (logOutput.exitCode !== 0)
-                    throw new Error(logOutput.stderr);
-                const log = logOutput.stdout;
-                (0, core_1.startGroup)('Log Output');
-                (0, core_1.debug)(log);
-                (0, core_1.endGroup)();
-                const merges = [...((_a = log.matchAll(logRegex)) !== null && _a !== void 0 ? _a : [])].map(merge => ({ hash: merge.groups.hash, number: +merge.groups.number }));
-                if (merges.length === 0)
-                    throw new Error('No merges found.');
-                const owner = github_1.context.repo.owner;
-                const repo = github_1.context.repo.repo;
-                (0, core_1.startGroup)('Repo Object');
-                (0, core_1.debug)((0, util_1.inspect)(github_1.context.repo));
-                (0, core_1.endGroup)();
-                for (const merge of merges) {
-                    const pullRequest = (yield octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
-                    const body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
-                    (0, core_1.startGroup)('PR Body');
-                    (0, core_1.debug)((0, util_1.inspect)(body));
-                    (0, core_1.endGroup)();
-                    const linkGroups = [...body.matchAll(linkRegex)].map(link => link.groups);
-                    (0, core_1.startGroup)('Link Groups');
-                    (0, core_1.debug)((0, util_1.inspect)(linkGroups));
-                    (0, core_1.endGroup)();
-                    const links = linkGroups
-                        .filter((link, i, all) => all.findIndex(l => { var _a, _b, _c, _d, _e, _f, _g, _h; return `${(_b = (_a = link.owner) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : owner}/${(_d = (_c = link.repo) === null || _c === void 0 ? void 0 : _c.toLowerCase()) !== null && _d !== void 0 ? _d : repo}#${link.issue}` === `${(_f = (_e = l.owner) === null || _e === void 0 ? void 0 : _e.toLowerCase()) !== null && _f !== void 0 ? _f : owner}/${(_h = (_g = l.repo) === null || _g === void 0 ? void 0 : _g.toLowerCase()) !== null && _h !== void 0 ? _h : repo}#${l.issue}`; }) === i);
-                    (0, core_1.startGroup)('Links');
-                    (0, core_1.debug)((0, util_1.inspect)(links));
-                    (0, core_1.endGroup)();
-                    for (const link of links) {
-                        const issue = (yield octokit.rest.issues.get({ owner: (_c = link.owner) !== null && _c !== void 0 ? _c : owner, repo: (_d = link.repo) !== null && _d !== void 0 ? _d : repo, issue_number: +link.issue })).data;
-                        if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
-                            const { repository } = issue.url.match(issueRegex).groups;
-                            issues.push(Object.assign({ id: `${repository}#${link.issue}` }, (0, functions_1.getIssueMetadata)({ stage, body: (_e = issue.body) !== null && _e !== void 0 ? _e : '', commit: merge.hash, labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
-                                    .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string'),
-                                repository: `${owner}/${repo}`, version })));
-                        }
-                    }
-                }
-            }
-            else if (stage === 'production' || stage === 'beta') {
-                const currentBranch = stage === 'production' ? 'main' : 'release';
-                const filterLabel = stage === 'production' ? 'beta' : 'alpha';
-                const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
-                (0, core_1.debug)(`Query: ${query}`);
-                const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
-                (0, core_1.startGroup)('Query Items');
-                (0, core_1.debug)((0, util_1.inspect)(items));
-                (0, core_1.endGroup)();
-                for (const issue of items) {
-                    (0, core_1.debug)(`Issue ${issue.repository}#${issue.number}`);
-                    const { repository } = issue.url.match(issueRegex).groups;
-                    const { body, commit, labels } = (0, functions_1.getIssueMetadata)({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', labels: issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== ''), version, commit: reference });
-                    (0, core_1.startGroup)('Issue Body');
-                    (0, core_1.debug)((_g = issue.body) !== null && _g !== void 0 ? _g : '');
-                    (0, core_1.endGroup)();
-                    (0, core_1.startGroup)('Modified Body');
-                    (0, core_1.debug)(body);
-                    (0, core_1.endGroup)();
-                    const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
-                    if (branchesOutput.exitCode !== 0) {
-                        (0, core_1.warning)(`Wrong linking to commit ${commit} from issue ${issue.repository}#${issue.number}.`);
-                        continue;
-                    }
-                    const branches = branchesOutput.stdout;
-                    if ([...branches.matchAll(branchRegex)].map(branch => branch.groups.branch).includes(currentBranch))
-                        issues.push({ id: `${repository}#${issue.number}`, body, labels });
-                }
-            }
-            if (issues.length === 0 && phase === Phase.after)
+            const client = new zenhub_client_1.ZenHubClient(zenHubKey, zenHubWorkspace, octokit);
+            const issues = (yield (0, functions_1.getTargetIssues)(stage, version, previousVersion, reference, octokit)).map(issue => (Object.assign(Object.assign({}, issue), { labels: (0, functions_1.refineLabels)(issue.labels, issue.body, stage) })));
+            if (issues.length === 0)
                 throw new Error('No issues to mark.');
             (0, core_1.startGroup)('Issues');
             (0, core_1.debug)((0, util_1.inspect)(issues));
             (0, core_1.endGroup)();
             for (const issue of issues) {
                 try {
-                    const { owner, repo, number } = issue.id.match(idRegex).groups;
-                    yield octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && stage === 'production' ? 'closed' : undefined });
+                    const { owner, repo, number } = (0, functions_1.deconstructIssueId)(issue);
+                    if (client.enabled) {
+                        yield client.moveGitHubIssue(owner, repo, +number, stage);
+                    }
+                    const needsTest = issue.labels.map(label => label.trim().toLowerCase()).includes('test');
+                    yield octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && !needsTest && stage === 'production' ? 'closed' : undefined });
                 }
                 catch (error) {
                     (0, core_1.startGroup)('Issue Update Error');
@@ -204,19 +233,7 @@ function run() {
         }
     });
 }
-const token = process.env.GITHUB_PAT;
-const octokit = (0, github_1.getOctokit)(token);
-const client = new zenhub_client_1.ZenHubClient('zh_ea3c42a7040b19c2b7e30ee976ed5e944cc72c8910c3a08aacb3685554f4d557', '610932e45f62cf00178cc02e', octokit);
-client.getPipelines().then((pipelines) => __awaiter(void 0, void 0, void 0, function* () {
-    for (const pipeline of pipelines) {
-        const issues = yield client.getPipelineIssues(pipeline.name);
-        for (const issue of issues) {
-            const id = yield client.getGitHubIssueId(issue.repository.ownerName, issue.repository.name, issue.number);
-            console.log(`${id} ${issue.repository.ownerName}/${issue.repository.name}#${issue.number} (${issue.title})`);
-        }
-    }
-}));
-//run();
+run();
 
 
 /***/ }),
@@ -255,7 +272,11 @@ class ZenHubClient {
                 Accept: 'application/json'
             }
         };
-        (0, core_1.debug)(`Workspace Id: ${workspaceId}`);
+        this.enabled = key !== '' && workspaceId !== '';
+        (0, core_1.debug)(`Enabled: ${this.enabled}`);
+        if (this.enabled) {
+            (0, core_1.debug)(`Workspace Id: ${workspaceId}`);
+        }
     }
     getPipelines() {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
