@@ -21,4 +21,6 @@ Usage:
           version: ${{ env.RELEASE_VERSION }} # Coming from NoorDigitalAgency/release-lookup@main
           previous-version: ${{ env.RELEASE_PREVIOUS_VERSION }} # Coming from NoorDigitalAgency/release-lookup@main
           close-issues: ${{ inputs.close-issues }} # Close Issues on Merge to Production
+          zenhub-key: ${{ secrets.zenhub-key }} # ZenHub API Key
+          zenhub-workspace: ${{ secrets.zenhub-workspace }} # ZenHub Workspace ID
 ```
