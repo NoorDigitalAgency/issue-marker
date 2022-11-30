@@ -16,7 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getIssueMetadata = void 0;
+exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getMarkedIssues = exports.getIssueMetadata = void 0;
 const js_yaml_1 = __nccwpck_require__(1917);
 const exec_1 = __nccwpck_require__(1514);
 const core_1 = __nccwpck_require__(2186);
@@ -46,6 +46,15 @@ exports.getIssueMetadata = getIssueMetadata;
 function summarizeMetadata(metadata) {
     return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
+function getMarkedIssues(stage, octokit) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const filterLabel = stage === 'production' ? 'beta' : 'alpha';
+        const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
+        (0, core_1.debug)(`Query: ${query}`);
+        return (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+    });
+}
+exports.getMarkedIssues = getMarkedIssues;
 function getTargetIssues(stage, version, previousVersion, reference, octokit) {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
@@ -100,10 +109,7 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
         }
         else if (stage === 'production' || stage === 'beta') {
             const currentBranch = stage === 'production' ? 'main' : 'release';
-            const filterLabel = stage === 'production' ? 'beta' : 'alpha';
-            const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
-            (0, core_1.debug)(`Query: ${query}`);
-            const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+            const items = yield getMarkedIssues(stage, octokit);
             (0, core_1.startGroup)('Query Items');
             (0, core_1.debug)((0, util_1.inspect)(items));
             (0, core_1.endGroup)();

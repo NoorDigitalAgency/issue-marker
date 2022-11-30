@@ -50,6 +50,17 @@ function summarizeMetadata (metadata: string) {
     return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
 
+export async function getMarkedIssues(stage: 'beta' | 'production', octokit: InstanceType<typeof GitHub>) {
+
+    const filterLabel = stage === 'production' ? 'beta' : 'alpha';
+
+    const query = `"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
+
+    debug(`Query: ${query}`);
+
+    return (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+}
+
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
 
     const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
@@ -153,13 +164,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         const currentBranch = stage === 'production' ? 'main' : 'release';
 
-        const filterLabel = stage === 'production' ? 'beta' : 'alpha';
-
-        const query = `"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
-
-        debug(`Query: ${query}`);
-
-        const items = (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+        const items = await getMarkedIssues(stage, octokit);
 
         startGroup('Query Items');
 
