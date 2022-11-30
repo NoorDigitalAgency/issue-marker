@@ -20,10 +20,12 @@ inputs:
       default: 'true'
       description: Close Issues on Merge to Production
     zenhub-key:
-      required: true
+      default: ''
+      required: false
       description: ZenHub's API Key
     zenhub-workspace:
-      required: true
+      default: ''
+      required: false
       description: ZenHub's Workspace Id
 runs:
   using: 'node16'

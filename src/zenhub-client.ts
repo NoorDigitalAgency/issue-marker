@@ -37,9 +37,18 @@ export class ZenHubClient {
 
     private pipelines?: Array<ZenHubPipeline>;
 
+    public readonly enabled: boolean;
+
     constructor(private key: string, private workspaceId: string, private octokit: InstanceType<typeof GitHub>) {
 
-        debug(`Workspace Id: ${workspaceId}`);
+        this.enabled = key !== '' && workspaceId !== '';
+
+        debug(`Enabled: ${this.enabled}`);
+
+        if(this.enabled) {
+
+            debug(`Workspace Id: ${workspaceId}`);
+        }
     }
 
     public async getPipelines(): Promise<ZenHubPipeline[]> {

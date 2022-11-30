@@ -207,7 +207,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
     return issues;
 }
 
-export function deconstructIssue(issue: {id: string; body: string; labels: Array<string>}): {owner: string; repo: string; number: string} {
+export function deconstructIssueId(issue: {id: string; body: string; labels: Array<string>}): {owner: string; repo: string; number: string} {
 
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 
@@ -216,7 +216,7 @@ export function deconstructIssue(issue: {id: string; body: string; labels: Array
 
 export function refineLabels(labels: Array<string>, body: string, stage: string): Array<string> {
 
-    const testStageRegex = new RegExp(`^ *- +\\[x] +${stage}$`, 'im');
+    const testStageRegex = new RegExp(`^ *- +\\[x] +${stage} *$`, 'im');
 
     const needsTest = testStageRegex.test(body);
 

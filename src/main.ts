@@ -1,8 +1,8 @@
 import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getOctokit } from '@actions/github';
 import { inspect } from 'util';
-import {deconstructIssue, getTargetIssues, refineLabels} from './functions';
-import {ZenHubClient} from "./zenhub-client";
+import { deconstructIssueId, getTargetIssues, refineLabels } from './functions';
+import { ZenHubClient } from "./zenhub-client";
 
 async function run(): Promise<void> {
 
@@ -58,7 +58,6 @@ async function run(): Promise<void> {
 
     const octokit = getOctokit(token);
 
-    // TODO: Use the client to move the issues
     const client = new ZenHubClient(zenHubKey, zenHubWorkspace, octokit);
 
     const issues = (await getTargetIssues(stage!, version, previousVersion, reference, octokit)).map(issue => ({...issue, labels: refineLabels(issue.labels, issue.body, stage!)}));
@@ -75,11 +74,14 @@ async function run(): Promise<void> {
 
       try {
 
-        const {owner, repo, number} = deconstructIssue(issue);
+        const {owner, repo, number} = deconstructIssueId(issue);
+
+        if (client.enabled) {
+
+          await client.moveGitHubIssue(owner, repo, +number, stage!);
+        }
 
         const needsTest = issue.labels.map(label => label.trim().toLowerCase()).includes('test');
-
-        await client.moveGitHubIssue(owner, repo, +number, stage!);
 
         await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && !needsTest && stage === 'production' ? 'closed' : undefined});
 
