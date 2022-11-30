@@ -12,6 +12,8 @@ const closerComment = '<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->';
 
 const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-marker">.*?\`\`\`yaml\\s+(?<yaml>.*?)\\s+\`\`\`.*?<\\/details>(?:\\s*${closerComment})?\\s+`, 'ims');
 
+const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
+
 export function getIssueMetadata (configuration: {stage: 'alpha'; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; body: string; version: string; commit: string}) {
 
     const { stage, body } = {...configuration};
@@ -50,6 +52,13 @@ function summarizeMetadata (metadata: string) {
     return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
 
+export function getIssueRepository(issue: {url: string}) {
+
+    const { repository } = issue.url.match(issueRegex)!.groups!;
+
+    return repository;
+}
+
 export async function getMarkedIssues(stage: 'beta' | 'production', octokit: InstanceType<typeof GitHub>) {
 
     const filterLabel = stage === 'production' ? 'beta' : 'alpha';
@@ -64,8 +73,6 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
 
     const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
-
-    const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
 
     const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
 
@@ -144,7 +151,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
                 if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
-                    const { repository } = issue.url.match(issueRegex)!.groups!;
+                    const repository = getIssueRepository(issue);
 
                     issues.push({
 
@@ -176,7 +183,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             debug(`Issue ${issue.repository}#${issue.number}`);
 
-            const { repository } = issue.url.match(issueRegex)!.groups!;
+            const repository = getIssueRepository(issue);
 
             const {body, commit} = getIssueMetadata({stage, body: issue.body ?? '', version, commit: reference});
 

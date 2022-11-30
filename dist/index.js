@@ -16,7 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getMarkedIssues = exports.getIssueMetadata = void 0;
+exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getMarkedIssues = exports.getIssueRepository = exports.getIssueMetadata = void 0;
 const js_yaml_1 = __nccwpck_require__(1917);
 const exec_1 = __nccwpck_require__(1514);
 const core_1 = __nccwpck_require__(2186);
@@ -25,6 +25,7 @@ const util_1 = __nccwpck_require__(3837);
 const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 const closerComment = '<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->';
 const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-marker">.*?\`\`\`yaml\\s+(?<yaml>.*?)\\s+\`\`\`.*?<\\/details>(?:\\s*${closerComment})?\\s+`, 'ims');
+const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
 function getIssueMetadata(configuration) {
     var _a, _b, _c, _d;
     const { stage, body } = Object.assign({}, configuration);
@@ -46,6 +47,11 @@ exports.getIssueMetadata = getIssueMetadata;
 function summarizeMetadata(metadata) {
     return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
+function getIssueRepository(issue) {
+    const { repository } = issue.url.match(issueRegex).groups;
+    return repository;
+}
+exports.getIssueRepository = getIssueRepository;
 function getMarkedIssues(stage, octokit) {
     return __awaiter(this, void 0, void 0, function* () {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
@@ -59,7 +65,6 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
     var _a, _b, _c, _d, _e, _f, _g;
     return __awaiter(this, void 0, void 0, function* () {
         const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
-        const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
         const branchRegex = /^.+?\/(?<branch>[^\/\s]+)\s*$/mg;
         const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
         const issues = new Array();
@@ -100,7 +105,7 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
                 for (const link of links) {
                     const issue = (yield octokit.rest.issues.get({ owner: (_c = link.owner) !== null && _c !== void 0 ? _c : owner, repo: (_d = link.repo) !== null && _d !== void 0 ? _d : repo, issue_number: +link.issue })).data;
                     if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
-                        const { repository } = issue.url.match(issueRegex).groups;
+                        const repository = getIssueRepository(issue);
                         issues.push(Object.assign(Object.assign({ id: `${repository}#${link.issue}` }, getIssueMetadata({ stage, body: (_e = issue.body) !== null && _e !== void 0 ? _e : '', commit: merge.hash, repository: `${owner}/${repo}`, version })), { labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
                                 .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string') }));
                     }
@@ -115,7 +120,7 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
             (0, core_1.endGroup)();
             for (const issue of items) {
                 (0, core_1.debug)(`Issue ${issue.repository}#${issue.number}`);
-                const { repository } = issue.url.match(issueRegex).groups;
+                const repository = getIssueRepository(issue);
                 const { body, commit } = getIssueMetadata({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', version, commit: reference });
                 (0, core_1.startGroup)('Issue Body');
                 (0, core_1.debug)((_g = issue.body) !== null && _g !== void 0 ? _g : '');
