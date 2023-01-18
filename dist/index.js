@@ -128,15 +128,21 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
                 (0, core_1.startGroup)('Modified Body');
                 (0, core_1.debug)(body);
                 (0, core_1.endGroup)();
-                const branchesOutput = yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit]);
-                if (branchesOutput.exitCode !== 0) {
-                    (0, core_1.warning)(`Wrong linking to commit ${commit} from issue ${issue.repository}#${issue.number}.`);
-                    continue;
+                let error = '';
+                let branches = '';
+                try {
+                    yield (0, exec_1.getExecOutput)('git', ['branch', '-r', '--contains', commit], { listeners: { stderr: (data) => error += data.toString(), stdout: (data) => branches += data.toString() } });
+                    const labels = issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== '');
+                    if ([...branches.matchAll(branchRegex)].map(branch => branch.groups.branch).includes(currentBranch))
+                        issues.push({
+                            id: `${repository}#${issue.number}`,
+                            body,
+                            labels
+                        });
                 }
-                const branches = branchesOutput.stdout;
-                const labels = issue.labels.map(label => { var _a; return (_a = label.name) !== null && _a !== void 0 ? _a : ''; }).filter(label => label !== '');
-                if ([...branches.matchAll(branchRegex)].map(branch => branch.groups.branch).includes(currentBranch))
-                    issues.push({ id: `${repository}#${issue.number}`, body, labels });
+                catch (_h) {
+                    (0, core_1.warning)(`Commit: ${commit}, Repository: ${issue.repository}#${issue.number}, Error: ${error}.`);
+                }
             }
         }
         return issues;
@@ -154,7 +160,7 @@ function refineLabels(labels, body, stage) {
     return labels.filter(label => !['alpha', 'beta', 'production', 'test', 'approved'].includes(label)).concat([stage, ...(needsTest ? ['test'] : [])]);
 }
 exports.refineLabels = refineLabels;
-
+//# sourceMappingURL=functions.js.map
 
 /***/ }),
 
@@ -245,7 +251,7 @@ function run() {
     });
 }
 run();
-
+//# sourceMappingURL=main.js.map
 
 /***/ }),
 
@@ -437,7 +443,7 @@ class ZenHubClient {
     }
 }
 exports.ZenHubClient = ZenHubClient;
-
+//# sourceMappingURL=zenhub-client.js.map
 
 /***/ }),
 

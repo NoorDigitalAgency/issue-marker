@@ -199,20 +199,26 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             endGroup();
 
-            const branchesOutput = await getExecOutput('git', ['branch', '-r', '--contains', commit]);
+            let error = '';
 
-            if (branchesOutput.exitCode !== 0) {
+            let branches = '';
 
-                warning(`Wrong linking to commit ${commit} from issue ${issue.repository}#${issue.number}.`);
+            try {
 
-                continue;
+                await getExecOutput('git', ['branch', '-r', '--contains', commit], {listeners: {stderr: (data: Buffer) => error += data.toString(), stdout: (data: Buffer) => branches += data.toString()}});
+
+                const labels = issue.labels.map(label => label.name ?? '').filter(label => label !== '');
+
+                if ([...branches.matchAll(branchRegex)].map(branch => branch.groups!.branch).includes(currentBranch)) issues.push({
+                    id: `${repository}#${issue.number}`,
+                    body,
+                    labels
+                });
+
+            } catch {
+
+                warning(`Commit: ${commit}, Repository: ${issue.repository}#${issue.number}, Error: ${error}.`);
             }
-
-            const branches = branchesOutput.stdout;
-
-            const labels = issue.labels.map(label => label.name ?? '').filter(label => label !== '');
-
-            if ([...branches.matchAll(branchRegex)].map(branch => branch.groups!.branch).includes(currentBranch)) issues.push({id: `${repository}#${issue.number}`, body, labels});
         }
     }
 
