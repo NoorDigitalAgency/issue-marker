@@ -1,7 +1,7 @@
 import { load, dump } from 'js-yaml';
 import {Link, Metadata} from './types';
 import {getExecOutput} from "@actions/exec";
-import {debug, endGroup, startGroup, warning} from "@actions/core";
+import {info, endGroup, startGroup, warning} from "@actions/core";
 import {context} from "@actions/github";
 import {inspect} from "util";
 import type {GitHub} from "@actions/github/lib/utils";
@@ -65,7 +65,7 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     const query = `"application: 'issue-marker'" AND "repository: '${context.repo.owner}/${context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
 
-    debug(`Query: ${query}`);
+    info(`Query: ${query}`);
 
     return (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 }
@@ -92,7 +92,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         startGroup('Log Output');
 
-        debug(log);
+        info(log);
 
         endGroup();
 
@@ -111,7 +111,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         startGroup('Repo Object');
 
-        debug(inspect(context.repo));
+        info(inspect(context.repo));
 
         endGroup();
 
@@ -123,7 +123,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             startGroup('PR Body');
 
-            debug(inspect(body));
+            info(inspect(body));
 
             endGroup();
 
@@ -131,7 +131,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             startGroup('Link Groups');
 
-            debug(inspect(linkGroups));
+            info(inspect(linkGroups));
 
             endGroup();
 
@@ -141,7 +141,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             startGroup('Links');
 
-            debug(inspect(links));
+            info(inspect(links));
 
             endGroup();
 
@@ -175,13 +175,13 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         startGroup('Query Items');
 
-        debug(inspect(items));
+        info(inspect(items));
 
         endGroup();
 
         for (const issue of items) {
 
-            debug(`Issue ${issue.repository}#${issue.number}`);
+            info(`Issue ${issue.repository}#${issue.number}`);
 
             const repository = getIssueRepository(issue);
 
@@ -189,13 +189,13 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             startGroup('Issue Body');
 
-            debug(issue.body ?? '');
+            info(issue.body ?? '');
 
             endGroup();
 
             startGroup('Modified Body');
 
-            debug(body);
+            info(body);
 
             endGroup();
 

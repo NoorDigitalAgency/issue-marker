@@ -1,5 +1,5 @@
 import axios, {AxiosRequestConfig} from 'axios';
-import {debug} from "@actions/core";
+import * as core from "@actions/core";
 import type {GitHub} from "@actions/github/lib/utils";
 
 export interface ZenHubPipeline {
@@ -43,11 +43,19 @@ export class ZenHubClient {
 
         this.enabled = key !== '' && workspaceId !== '';
 
-        debug(`Enabled: ${this.enabled}`);
+        core.info(`Enabled: ${this.enabled}`);
 
         if(this.enabled) {
 
-            debug(`Workspace Id: ${workspaceId}`);
+            core.info(`Workspace Id: ${workspaceId}`);
+        }
+    }
+
+    private updateWarning(warning: string, data: {errors?: Array<{message: string; path: string}>}) {
+
+        if (data?.errors instanceof Array) {
+
+            data.errors.map((error: {message: string; path: string}) => `${error.path}: ${error.message}`).forEach((message: string) => warning = `${(warning ? `${warning}\n` : '')}${message}`);
         }
     }
 
@@ -82,6 +90,8 @@ export class ZenHubClient {
 
         let count = 0;
 
+        let warning = null as unknown as string;
+
         const pipelines = new Array<ZenHubPipeline>();
 
         do {
@@ -90,6 +100,8 @@ export class ZenHubClient {
 
             data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
 
+            this.updateWarning(warning, data);
+
             cursor = data?.workspace?.pipelinesConnection?.pageInfo?.endCursor;
 
             count = data?.workspace?.pipelinesConnection?.totalCount ?? 0;
@@ -97,6 +109,11 @@ export class ZenHubClient {
             ((data?.workspace?.pipelinesConnection?.nodes ?? []) as Array<ZenHubPipeline>).forEach(pipeline => pipelines.push(pipeline));
 
         } while (data?.workspace?.pipelinesConnection?.pageInfo?.hasNextPage === true);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
 
         if (pipelines.length !== count) {
 
@@ -154,6 +171,8 @@ export class ZenHubClient {
 
         let count = 0;
 
+        let warning = null as unknown as string;
+
         const issues = new Array<ZenHubIssue>();
 
         do {
@@ -162,6 +181,8 @@ export class ZenHubClient {
 
             data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
 
+            this.updateWarning(warning, data);
+
             cursor = data?.searchIssuesByPipeline?.pageInfo?.endCursor;
 
             count = data?.searchIssuesByPipeline?.totalCount ?? 0;
@@ -169,6 +190,11 @@ export class ZenHubClient {
             ((data?.searchIssuesByPipeline?.nodes ?? []) as Array<ZenHubIssue>).forEach(issue => issues.push(issue));
 
         } while (data?.searchIssuesByPipeline?.pageInfo?.hasNextPage === true);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
 
         if (issues.length !== count) {
 
@@ -212,6 +238,15 @@ export class ZenHubClient {
 
         const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
 
+        let warning = null as unknown as string;
+
+        this.updateWarning(warning, data);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
+
         return data?.issueByInfo?.id as string;
     }
 
@@ -227,7 +262,16 @@ export class ZenHubClient {
 
         const variables = { issue, pipeline } as {issue: string; pipeline: string};
 
-        await axios.post(this.config.url!, { query, variables }, this.config);
+        const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
+
+        let warning = null as unknown as string;
+
+        this.updateWarning(warning, data);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
     }
 
     public async moveGitHubIssue(owner: string, repo: string, number: number, pipeline: string): Promise<void> {

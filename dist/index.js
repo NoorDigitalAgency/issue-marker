@@ -56,7 +56,7 @@ function getMarkedIssues(stage, octokit) {
     return __awaiter(this, void 0, void 0, function* () {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
         const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
-        (0, core_1.debug)(`Query: ${query}`);
+        (0, core_1.info)(`Query: ${query}`);
         return (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
     });
 }
@@ -75,7 +75,7 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
                 throw new Error(logOutput.stderr);
             const log = logOutput.stdout;
             (0, core_1.startGroup)('Log Output');
-            (0, core_1.debug)(log);
+            (0, core_1.info)(log);
             (0, core_1.endGroup)();
             const merges = [...((_a = log.matchAll(logRegex)) !== null && _a !== void 0 ? _a : [])].map(merge => ({ hash: merge.groups.hash, number: +merge.groups.number }));
             if (merges.length === 0) {
@@ -85,22 +85,22 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
             const owner = github_1.context.repo.owner;
             const repo = github_1.context.repo.repo;
             (0, core_1.startGroup)('Repo Object');
-            (0, core_1.debug)((0, util_1.inspect)(github_1.context.repo));
+            (0, core_1.info)((0, util_1.inspect)(github_1.context.repo));
             (0, core_1.endGroup)();
             for (const merge of merges) {
                 const pullRequest = (yield octokit.rest.issues.get({ owner, repo, issue_number: merge.number })).data;
                 const body = (_b = pullRequest.body) !== null && _b !== void 0 ? _b : '';
                 (0, core_1.startGroup)('PR Body');
-                (0, core_1.debug)((0, util_1.inspect)(body));
+                (0, core_1.info)((0, util_1.inspect)(body));
                 (0, core_1.endGroup)();
                 const linkGroups = [...body.matchAll(linkRegex)].map(link => link.groups);
                 (0, core_1.startGroup)('Link Groups');
-                (0, core_1.debug)((0, util_1.inspect)(linkGroups));
+                (0, core_1.info)((0, util_1.inspect)(linkGroups));
                 (0, core_1.endGroup)();
                 const links = linkGroups
                     .filter((link, i, all) => all.findIndex(l => { var _a, _b, _c, _d, _e, _f, _g, _h; return `${(_b = (_a = link.owner) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : owner}/${(_d = (_c = link.repo) === null || _c === void 0 ? void 0 : _c.toLowerCase()) !== null && _d !== void 0 ? _d : repo}#${link.issue}` === `${(_f = (_e = l.owner) === null || _e === void 0 ? void 0 : _e.toLowerCase()) !== null && _f !== void 0 ? _f : owner}/${(_h = (_g = l.repo) === null || _g === void 0 ? void 0 : _g.toLowerCase()) !== null && _h !== void 0 ? _h : repo}#${l.issue}`; }) === i);
                 (0, core_1.startGroup)('Links');
-                (0, core_1.debug)((0, util_1.inspect)(links));
+                (0, core_1.info)((0, util_1.inspect)(links));
                 (0, core_1.endGroup)();
                 for (const link of links) {
                     const issue = (yield octokit.rest.issues.get({ owner: (_c = link.owner) !== null && _c !== void 0 ? _c : owner, repo: (_d = link.repo) !== null && _d !== void 0 ? _d : repo, issue_number: +link.issue })).data;
@@ -116,17 +116,17 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
             const currentBranch = stage === 'production' ? 'main' : 'release';
             const items = yield getMarkedIssues(stage, octokit);
             (0, core_1.startGroup)('Query Items');
-            (0, core_1.debug)((0, util_1.inspect)(items));
+            (0, core_1.info)((0, util_1.inspect)(items));
             (0, core_1.endGroup)();
             for (const issue of items) {
-                (0, core_1.debug)(`Issue ${issue.repository}#${issue.number}`);
+                (0, core_1.info)(`Issue ${issue.repository}#${issue.number}`);
                 const repository = getIssueRepository(issue);
                 const { body, commit } = getIssueMetadata({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', version, commit: reference });
                 (0, core_1.startGroup)('Issue Body');
-                (0, core_1.debug)((_g = issue.body) !== null && _g !== void 0 ? _g : '');
+                (0, core_1.info)((_g = issue.body) !== null && _g !== void 0 ? _g : '');
                 (0, core_1.endGroup)();
                 (0, core_1.startGroup)('Modified Body');
-                (0, core_1.debug)(body);
+                (0, core_1.info)(body);
                 (0, core_1.endGroup)();
                 let error = '';
                 let branches = '';
@@ -260,6 +260,29 @@ run();
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -275,7 +298,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZenHubClient = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
-const core_1 = __nccwpck_require__(2186);
+const core = __importStar(__nccwpck_require__(2186));
 class ZenHubClient {
     constructor(key, workspaceId, octokit) {
         this.key = key;
@@ -290,9 +313,14 @@ class ZenHubClient {
             }
         };
         this.enabled = key !== '' && workspaceId !== '';
-        (0, core_1.debug)(`Enabled: ${this.enabled}`);
+        core.info(`Enabled: ${this.enabled}`);
         if (this.enabled) {
-            (0, core_1.debug)(`Workspace Id: ${workspaceId}`);
+            core.info(`Workspace Id: ${workspaceId}`);
+        }
+    }
+    updateWarning(warning, data) {
+        if ((data === null || data === void 0 ? void 0 : data.errors) instanceof Array) {
+            data.errors.map((error) => `${error.path}: ${error.message}`).forEach((message) => warning = `${(warning ? `${warning}\n` : '')}${message}`);
         }
     }
     getPipelines() {
@@ -321,14 +349,19 @@ class ZenHubClient {
             let data;
             let cursor = null;
             let count = 0;
+            let warning = null;
             const pipelines = new Array();
             do {
                 const variables = { id: this.workspaceId, cursor };
                 data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+                this.updateWarning(warning, data);
                 cursor = (_d = (_c = (_b = data === null || data === void 0 ? void 0 : data.workspace) === null || _b === void 0 ? void 0 : _b.pipelinesConnection) === null || _c === void 0 ? void 0 : _c.pageInfo) === null || _d === void 0 ? void 0 : _d.endCursor;
                 count = (_g = (_f = (_e = data === null || data === void 0 ? void 0 : data.workspace) === null || _e === void 0 ? void 0 : _e.pipelinesConnection) === null || _f === void 0 ? void 0 : _f.totalCount) !== null && _g !== void 0 ? _g : 0;
                 ((_k = (_j = (_h = data === null || data === void 0 ? void 0 : data.workspace) === null || _h === void 0 ? void 0 : _h.pipelinesConnection) === null || _j === void 0 ? void 0 : _j.nodes) !== null && _k !== void 0 ? _k : []).forEach(pipeline => pipelines.push(pipeline));
             } while (((_o = (_m = (_l = data === null || data === void 0 ? void 0 : data.workspace) === null || _l === void 0 ? void 0 : _l.pipelinesConnection) === null || _m === void 0 ? void 0 : _m.pageInfo) === null || _o === void 0 ? void 0 : _o.hasNextPage) === true);
+            if (warning != null) {
+                core.warning(warning);
+            }
             if (pipelines.length !== count) {
                 throw new Error(`Expected ${count} pipelines but queried ${pipelines.length}.`);
             }
@@ -374,14 +407,19 @@ class ZenHubClient {
             let data;
             let cursor = null;
             let count = 0;
+            let warning = null;
             const issues = new Array();
             do {
                 const variables = { id: pipeline.id, cursor };
                 data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+                this.updateWarning(warning, data);
                 cursor = (_c = (_b = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _b === void 0 ? void 0 : _b.pageInfo) === null || _c === void 0 ? void 0 : _c.endCursor;
                 count = (_e = (_d = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _d === void 0 ? void 0 : _d.totalCount) !== null && _e !== void 0 ? _e : 0;
                 ((_g = (_f = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _f === void 0 ? void 0 : _f.nodes) !== null && _g !== void 0 ? _g : []).forEach(issue => issues.push(issue));
             } while (((_j = (_h = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _h === void 0 ? void 0 : _h.pageInfo) === null || _j === void 0 ? void 0 : _j.hasNextPage) === true);
+            if (warning != null) {
+                core.warning(warning);
+            }
             if (issues.length !== count) {
                 throw new Error(`Expected ${count} issues but queried ${issues.length}.`);
             }
@@ -418,10 +456,16 @@ class ZenHubClient {
         `;
             const variables = { id, number };
             const data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+            let warning = null;
+            this.updateWarning(warning, data);
+            if (warning != null) {
+                core.warning(warning);
+            }
             return (_b = data === null || data === void 0 ? void 0 : data.issueByInfo) === null || _b === void 0 ? void 0 : _b.id;
         });
     }
     moveIssue(issue, pipeline) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             const query = `
             mutation moveIssue($issue: ID!, $pipeline: ID!) {
@@ -431,7 +475,12 @@ class ZenHubClient {
             }
         `;
             const variables = { issue, pipeline };
-            yield axios_1.default.post(this.config.url, { query, variables }, this.config);
+            const data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+            let warning = null;
+            this.updateWarning(warning, data);
+            if (warning != null) {
+                core.warning(warning);
+            }
         });
     }
     moveGitHubIssue(owner, repo, number, pipeline) {
