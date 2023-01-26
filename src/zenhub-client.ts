@@ -1,6 +1,7 @@
 import axios, {AxiosRequestConfig} from 'axios';
 import * as core from "@actions/core";
 import type {GitHub} from "@actions/github/lib/utils";
+import {inspect} from "util";
 
 export interface ZenHubPipeline {
     name: string;
@@ -94,6 +95,8 @@ export class ZenHubClient {
 
         const pipelines = new Array<ZenHubPipeline>();
 
+        let iteration = 0;
+
         do {
 
             const variables = { id: this.workspaceId, cursor } as {id: string; cursor?: string};
@@ -105,6 +108,21 @@ export class ZenHubClient {
             cursor = data?.workspace?.pipelinesConnection?.pageInfo?.endCursor;
 
             count = data?.workspace?.pipelinesConnection?.totalCount ?? 0;
+
+            iteration++;
+
+            core.startGroup(`Pipelines iteration #${iteration}`);
+
+            core.info(inspect({
+
+                payload: { query, variables },
+
+                cursor,
+
+                data
+            }));
+
+            core.endGroup();
 
             ((data?.workspace?.pipelinesConnection?.nodes ?? []) as Array<ZenHubPipeline>).forEach(pipeline => pipelines.push(pipeline));
 
@@ -175,6 +193,8 @@ export class ZenHubClient {
 
         const issues = new Array<ZenHubIssue>();
 
+        let iteration = 0;
+
         do {
 
             const variables = { id: pipeline.id, cursor } as {id: string; cursor?: string};
@@ -186,6 +206,21 @@ export class ZenHubClient {
             cursor = data?.searchIssuesByPipeline?.pageInfo?.endCursor;
 
             count = data?.searchIssuesByPipeline?.totalCount ?? 0;
+
+            iteration++;
+
+            core.startGroup(`Pipeline issues iteration #${iteration}`);
+
+            core.info(inspect({
+
+                payload: { query, variables },
+
+                cursor,
+
+                data
+            }));
+
+            core.endGroup();
 
             ((data?.searchIssuesByPipeline?.nodes ?? []) as Array<ZenHubIssue>).forEach(issue => issues.push(issue));
 
@@ -238,6 +273,17 @@ export class ZenHubClient {
 
         const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
 
+        core.startGroup(`GitHub issue`);
+
+        core.info(inspect({
+
+            payload: { query, variables },
+
+            data
+        }));
+
+        core.endGroup();
+
         let warning = null as unknown as string;
 
         this.updateWarning(warning, data);
@@ -263,6 +309,17 @@ export class ZenHubClient {
         const variables = { issue, pipeline } as {issue: string; pipeline: string};
 
         const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
+
+        core.startGroup(`Move issue`);
+
+        core.info(inspect({
+
+            payload: { query, variables },
+
+            data
+        }));
+
+        core.endGroup();
 
         let warning = null as unknown as string;
 

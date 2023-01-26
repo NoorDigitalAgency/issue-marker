@@ -299,6 +299,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZenHubClient = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const core = __importStar(__nccwpck_require__(2186));
+const util_1 = __nccwpck_require__(3837);
 class ZenHubClient {
     constructor(key, workspaceId, octokit) {
         this.key = key;
@@ -351,12 +352,21 @@ class ZenHubClient {
             let count = 0;
             let warning = null;
             const pipelines = new Array();
+            let iteration = 0;
             do {
                 const variables = { id: this.workspaceId, cursor };
                 data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
                 this.updateWarning(warning, data);
                 cursor = (_d = (_c = (_b = data === null || data === void 0 ? void 0 : data.workspace) === null || _b === void 0 ? void 0 : _b.pipelinesConnection) === null || _c === void 0 ? void 0 : _c.pageInfo) === null || _d === void 0 ? void 0 : _d.endCursor;
                 count = (_g = (_f = (_e = data === null || data === void 0 ? void 0 : data.workspace) === null || _e === void 0 ? void 0 : _e.pipelinesConnection) === null || _f === void 0 ? void 0 : _f.totalCount) !== null && _g !== void 0 ? _g : 0;
+                iteration++;
+                core.startGroup(`Pipelines iteration #${iteration}`);
+                core.info((0, util_1.inspect)({
+                    payload: { query, variables },
+                    cursor,
+                    data
+                }));
+                core.endGroup();
                 ((_k = (_j = (_h = data === null || data === void 0 ? void 0 : data.workspace) === null || _h === void 0 ? void 0 : _h.pipelinesConnection) === null || _j === void 0 ? void 0 : _j.nodes) !== null && _k !== void 0 ? _k : []).forEach(pipeline => pipelines.push(pipeline));
             } while (((_o = (_m = (_l = data === null || data === void 0 ? void 0 : data.workspace) === null || _l === void 0 ? void 0 : _l.pipelinesConnection) === null || _m === void 0 ? void 0 : _m.pageInfo) === null || _o === void 0 ? void 0 : _o.hasNextPage) === true);
             if (warning != null) {
@@ -409,12 +419,21 @@ class ZenHubClient {
             let count = 0;
             let warning = null;
             const issues = new Array();
+            let iteration = 0;
             do {
                 const variables = { id: pipeline.id, cursor };
                 data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
                 this.updateWarning(warning, data);
                 cursor = (_c = (_b = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _b === void 0 ? void 0 : _b.pageInfo) === null || _c === void 0 ? void 0 : _c.endCursor;
                 count = (_e = (_d = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _d === void 0 ? void 0 : _d.totalCount) !== null && _e !== void 0 ? _e : 0;
+                iteration++;
+                core.startGroup(`Pipeline issues iteration #${iteration}`);
+                core.info((0, util_1.inspect)({
+                    payload: { query, variables },
+                    cursor,
+                    data
+                }));
+                core.endGroup();
                 ((_g = (_f = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _f === void 0 ? void 0 : _f.nodes) !== null && _g !== void 0 ? _g : []).forEach(issue => issues.push(issue));
             } while (((_j = (_h = data === null || data === void 0 ? void 0 : data.searchIssuesByPipeline) === null || _h === void 0 ? void 0 : _h.pageInfo) === null || _j === void 0 ? void 0 : _j.hasNextPage) === true);
             if (warning != null) {
@@ -456,6 +475,12 @@ class ZenHubClient {
         `;
             const variables = { id, number };
             const data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+            core.startGroup(`GitHub issue`);
+            core.info((0, util_1.inspect)({
+                payload: { query, variables },
+                data
+            }));
+            core.endGroup();
             let warning = null;
             this.updateWarning(warning, data);
             if (warning != null) {
@@ -476,6 +501,12 @@ class ZenHubClient {
         `;
             const variables = { issue, pipeline };
             const data = (_a = (yield axios_1.default.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
+            core.startGroup(`Move issue`);
+            core.info((0, util_1.inspect)({
+                payload: { query, variables },
+                data
+            }));
+            core.endGroup();
             let warning = null;
             this.updateWarning(warning, data);
             if (warning != null) {
