@@ -57,7 +57,7 @@ function getMarkedIssues(stage, octokit) {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
         const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
         (0, core_1.info)(`Query: ${query}`);
-        return (yield octokit.paginate(octokit.rest.search.issuesAndPullRequests, { q: query })).items;
+        return (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
     });
 }
 exports.getMarkedIssues = getMarkedIssues;

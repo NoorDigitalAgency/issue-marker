@@ -67,7 +67,7 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     info(`Query: ${query}`);
 
-    return (await octokit.paginate(octokit.rest.search.issuesAndPullRequests, { q: query })).items;
+    return (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 }
 
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
