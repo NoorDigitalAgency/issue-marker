@@ -296,6 +296,45 @@ export class ZenHubClient {
         return data?.issueByInfo?.id as string;
     }
 
+    public async getGitHubPullRequestId(owner: string, repo: string, number: number): Promise<string> {
+
+        const query = `
+            query pullRquest($owner: String!, $repo: String!, $number: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $number) {
+                  id
+                }
+              }
+            }
+        `;
+
+        const variables = { owner, repo, number } as {owner: string; repo: string; number: number};
+
+        const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
+
+        core.startGroup(`GitHub pull request`);
+
+        core.info(inspect({
+
+            payload: { query, variables },
+
+            data
+        }));
+
+        core.endGroup();
+
+        let warning = null as unknown as string;
+
+        this.updateWarning(warning, data);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
+
+        return data?.repository?.pullRequest?.id as string;
+    }
+
     public async moveIssue(issue: string, pipeline: string): Promise<void> {
 
         const query = `
@@ -329,6 +368,52 @@ export class ZenHubClient {
 
             core.warning(warning);
         }
+    }
+
+    public async connectIssueToPullRequest(issueId: string, pullRequestId: string): Promise<void> {
+
+        const query = `
+            mutation CreateIssuePrConnection($input: CreateIssuePrConnectionInput!) {
+                createIssuePrConnection(input: $input) {
+                    issue {
+                            id
+                    }
+                }
+            }
+        `;
+
+        const variables = { input: {issueId, pullRequestId} } as {input: { issueId: string; pullRequestId: string }};
+
+        const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
+
+        core.startGroup(`Connect issue to pull request`);
+
+        core.info(inspect({
+
+            payload: { query, variables },
+
+            data
+        }));
+
+        core.endGroup();
+
+        let warning = null as unknown as string;
+
+        this.updateWarning(warning, data);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
+    }
+
+    public async connectGitHubIssueToGitHubPullRequest(issueOwner: string, issueRepo: string, issueNumber: number, pullRequestOwner: string, pullRequestRepo: string, pullRequestNumber: number): Promise<void> {
+
+        const issueId = await this.getGitHubIssueId(issueOwner, issueRepo, issueNumber);
+
+        const pullRequestId = await this.getGitHubPullRequestId(pullRequestOwner, pullRequestRepo, pullRequestNumber);
+
+        await this.connectIssueToPullRequest(issueId, pullRequestId);
     }
 
     public async moveGitHubIssue(owner: string, repo: string, number: number, pipeline: string): Promise<void> {
