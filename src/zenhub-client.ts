@@ -366,22 +366,64 @@ export class ZenHubClient {
         }
     }
 
-    public async connectGitHubIssueToGitHubPullRequest(issueOwner: string, issueRepo: string, issueNumber: number, pullRequestOwner: string, pullRequestRepo: string, pullRequestNumber: number): Promise<void> {
+    public async connectGitHubIssueToGitHubPullRequest(issues: Array<{owner: string; repo: string; number: number}>, pullRequest: {owner: string; repo: string; number: number}): Promise<void> {
 
-        const issueId = await this.getGitHubIssueId(issueOwner, issueRepo, issueNumber);
+        const pullRequestId = await this.getGitHubIssueId(pullRequest.owner, pullRequest.repo, pullRequest.number);
 
-        const pullRequestId = await this.getGitHubIssueId(pullRequestOwner, pullRequestRepo, pullRequestNumber);
+        for (const issue of issues) {
 
-        await this.connectIssueToPullRequest(issueId, pullRequestId);
+            const issueId = await this.getGitHubIssueId(issue.owner, issue.repo, issue.number);
+            
+            await this.connectIssueToPullRequest(issueId, pullRequestId);
+        }
     }
 
-    /*
-    mutation DeleteIssuePrConnection($input: DeleteIssuePrConnectionInput!) {
-      deleteIssuePrConnection(input: $input) {
-        clientMutationId
-      }
+    public async deleteIssueFromPullRequest(issueId: string, pullRequestId: string): Promise<void> {
+
+        const query = `
+            mutation DeleteIssuePrConnection($input: DeleteIssuePrConnectionInput!) {
+              deleteIssuePrConnection(input: $input) {
+                clientMutationId
+              }
+            }
+        `;
+
+        const variables = { input: {issueId, pullRequestId} } as {input: { issueId: string; pullRequestId: string }};
+
+        const data = (await axios.post(this.config.url!, { query, variables }, this.config)).data?.data;
+
+        core.startGroup(`Connect issue to pull request`);
+
+        core.info(inspect({
+
+            payload: { query, variables },
+
+            data
+        }));
+
+        core.endGroup();
+
+        let warning = null as unknown as string;
+
+        this.updateWarning(warning, data);
+
+        if (warning != null) {
+
+            core.warning(warning);
+        }
     }
-    */
+
+    public async deleteIssuesFromPullRequest(issues: Array<{owner: string; repo: string; number: number}>, pullRequest: {owner: string; repo: string; number: number}): Promise<void> {
+
+        const pullRequestId = await this.getGitHubIssueId(pullRequest.owner, pullRequest.repo, pullRequest.number);
+        
+        for (const issue of issues) {
+
+            const issueId = await this.getGitHubIssueId(issue.owner, issue.repo, issue.number);
+            
+            await this.deleteIssueFromPullRequest(issueId, pullRequestId);
+        }
+    }
     
     public async moveGitHubIssue(owner: string, repo: string, number: number, pipeline: string): Promise<void> {
 
