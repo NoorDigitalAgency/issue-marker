@@ -375,6 +375,14 @@ export class ZenHubClient {
         await this.connectIssueToPullRequest(issueId, pullRequestId);
     }
 
+    /*
+    mutation DeleteIssuePrConnection($input: DeleteIssuePrConnectionInput!) {
+      deleteIssuePrConnection(input: $input) {
+        clientMutationId
+      }
+    }
+    */
+    
     public async moveGitHubIssue(owner: string, repo: string, number: number, pipeline: string): Promise<void> {
 
         const issueId = await this.getGitHubIssueId(owner, repo, number);
