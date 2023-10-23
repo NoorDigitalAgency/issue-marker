@@ -21,7 +21,7 @@
     "@actions/github": "^5.1.1",
     "axios": "^1.2.0",
     "js-yaml": "^4.1.0",
-    "@noordigitalagency/zenhub-client": "2023.13.0"
+    "@noordigitalagency/zenhub-client": "2023.15.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
