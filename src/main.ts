@@ -2,7 +2,7 @@ import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from 
 import { getOctokit } from '@actions/github';
 import { inspect } from 'util';
 import { deconstructIssueId, getTargetIssues, refineLabels } from './functions';
-import { ZenHubClient } from "./zenhub-client";
+import { ZenHubClient } from "@noordigitalagency/zenhub-client";
 
 async function run(): Promise<void> {
 
