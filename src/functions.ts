@@ -69,7 +69,7 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     const items = (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 
-    info(`Items: ${inspect(items)}`);
+    info(`Items: ${inspect(items, {depth: 10})}`);
 
     const filteredItems = items.filter(item => item.body?.includes('application: \'issue-marker\'') &&
 
@@ -77,9 +77,9 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
         item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open');
 
-    info(`Filtered Items: ${inspect(filteredItems)}`);
+    info(`Filtered Items: ${inspect(filteredItems, {depth: 10})}`);
 
-    return filteredItems;
+    return items;
 }
 
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
