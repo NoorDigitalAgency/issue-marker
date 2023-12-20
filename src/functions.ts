@@ -1,7 +1,7 @@
 import { load, dump } from 'js-yaml';
 import {Link, Metadata} from './types';
 import {getExecOutput} from "@actions/exec";
-import {info, endGroup, startGroup, warning} from "@actions/core";
+import {info, endGroup, startGroup, warning, debug} from "@actions/core";
 import {context} from "@actions/github";
 import {inspect} from "util";
 import type {GitHub} from "@actions/github/lib/utils";
@@ -67,9 +67,19 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     info(`Query: ${query}`);
 
-    const metadata = dump({ application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` });
+    const items = (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
 
-    return (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items.filter(item => item.body?.includes(metadata) && item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open');
+    info(`Items: ${inspect(items)}`);
+
+    const filteredItems = items.filter(item => item.body?.includes('application: \'issue-marker\'') &&
+
+        item.body?.includes(`repository: '${context.repo.owner}/${context.repo.repo}'`) &&
+
+        item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open');
+
+    info(`Filtered Items: ${inspect(filteredItems)}`);
+
+    return filteredItems;
 }
 
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {

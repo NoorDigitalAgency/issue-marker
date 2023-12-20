@@ -57,8 +57,16 @@ function getMarkedIssues(stage, octokit) {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
         const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
         (0, core_1.info)(`Query: ${query}`);
-        const metadata = (0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` });
-        return (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items.filter(item => { var _a; return ((_a = item.body) === null || _a === void 0 ? void 0 : _a.includes(metadata)) && item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open'; });
+        const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+        (0, core_1.info)(`Items: ${(0, util_1.inspect)(items)}`);
+        const filteredItems = items.filter(item => {
+            var _a, _b;
+            return ((_a = item.body) === null || _a === void 0 ? void 0 : _a.includes('application: \'issue-marker\'')) &&
+                ((_b = item.body) === null || _b === void 0 ? void 0 : _b.includes(`repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'`)) &&
+                item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open';
+        });
+        (0, core_1.info)(`Filtered Items: ${(0, util_1.inspect)(filteredItems)}`);
+        return filteredItems;
     });
 }
 exports.getMarkedIssues = getMarkedIssues;
