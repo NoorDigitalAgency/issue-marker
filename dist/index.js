@@ -57,7 +57,8 @@ function getMarkedIssues(stage, octokit) {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
         const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
         (0, core_1.info)(`Query: ${query}`);
-        return (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+        const metadata = (0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` });
+        return (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items.filter(item => { var _a; return ((_a = item.body) === null || _a === void 0 ? void 0 : _a.includes(metadata)) && item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open'; });
     });
 }
 exports.getMarkedIssues = getMarkedIssues;
@@ -183,7 +184,7 @@ const core_1 = __nccwpck_require__(9483);
 const github_1 = __nccwpck_require__(9939);
 const util_1 = __nccwpck_require__(3837);
 const functions_1 = __nccwpck_require__(1786);
-const zenhub_client_1 = __nccwpck_require__(3330);
+const zenhub_client_1 = __nccwpck_require__(660);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -4957,7 +4958,7 @@ module.exports = parseParams
 
 /***/ }),
 
-/***/ 3330:
+/***/ 660:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47540,7 +47541,7 @@ class ZenHubClient {
         `;
             const variables = { input: { issueId, pullRequestId } };
             const data = (_a = (yield axios$1.post(this.config.url, { query, variables }, this.config)).data) === null || _a === void 0 ? void 0 : _a.data;
-            coreExports.startGroup(`Connect issue to pull request`);
+            coreExports.startGroup(`Remove issue from pull request`);
             coreExports.info(require$$0$1.inspect({
                 payload: { query, variables },
                 data

@@ -67,7 +67,9 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     info(`Query: ${query}`);
 
-    return (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
+    const metadata = dump({ application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` });
+
+    return (await octokit.rest.search.issuesAndPullRequests({ q: query })).data.items.filter(item => item.body?.includes(metadata) && item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open');
 }
 
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
