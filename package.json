@@ -20,12 +20,12 @@
     "@actions/exec": "^1.1.1",
     "@actions/github": "^5.1.1",
     "@noordigitalagency/zenhub-client": "2023.18.0",
-    "axios": "^1.6.0",
+    "axios": "^1.6.2",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "@types/js-yaml": "^4.0.8",
-    "@types/node": "^18.18.7",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^18.19.3",
     "@vercel/ncc": "^0.34.0",
     "typescript": "^4.9.5"
   }
