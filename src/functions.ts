@@ -5,6 +5,7 @@ import {info, endGroup, startGroup, warning, debug} from "@actions/core";
 import {context} from "@actions/github";
 import {inspect} from "util";
 import type {GitHub} from "@actions/github/lib/utils";
+import type {Issue, Organization, Repository, RepositoryConnection} from "@octokit/graphql-schema";
 
 const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 
@@ -59,16 +60,19 @@ export function getIssueRepository(issue: {url: string}) {
     return repository;
 }
 
-async function getAllIssuesInOrganization(organizationName: string, octokit: InstanceType<typeof GitHub>) {
+async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, labels: Array<string>) {
 
     let hasNextPage = true;
+
     let endCursor = null;
-    let allIssues = [];
+
+    const issues = new Array<Issue>();
 
     while (hasNextPage) {
+
         const query = `
-            query($orgName: String!, $endCursor: String) {
-                organization(login: $orgName) {
+            query($organizationName: String!, $endCursor: String) {
+                organization(login: $organizationName) {
                     repositories(first: 100, after: $endCursor) {
                         nodes {
                             issues(first: 100, labels: ["beta"], states: OPEN) {
@@ -90,24 +94,31 @@ async function getAllIssuesInOrganization(organizationName: string, octokit: Ins
             }
         `;
 
-        const variables = {
-            orgName: organizationName,
-            endCursor,
-        };
+        const repositories = (await octokit.graphql<{organization: Organization}>(query, { organizationName: context.repo.owner, endCursor })).organization.repositories as RepositoryConnection;
 
-        const { organization } = (await octokit.graphql<{organization: string}>(query, variables));
+        if (repositories.nodes) {
 
-        const repositories = organization.repositories.nodes;
-        repositories.forEach((repo: any) => {
-            const issues = repo.issues.edges.map((edge: any) => edge.node);
-            allIssues = allIssues.concat(issues);
-        });
+            for (const repository of repositories.nodes) {
 
-        hasNextPage = organization.repositories.pageInfo.hasNextPage;
-        endCursor = organization.repositories.pageInfo.endCursor;
+                if (repository?.issues.nodes) {
+
+                    for (const issue of repository.issues.nodes) {
+
+                        if (issue) {
+
+                            issues.push(issue);
+                        }
+                    }
+                }
+            }
+        }
+
+        hasNextPage = repositories.pageInfo.hasNextPage;
+
+        endCursor = repositories.pageInfo.endCursor;
     }
 
-    return allIssues;
+    return issues;
 }
 
 export async function getMarkedIssues(stage: 'beta' | 'production', octokit: InstanceType<typeof GitHub>) {
