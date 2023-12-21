@@ -63,7 +63,7 @@ export function getIssueRepository(issue: {url: string}) {
 async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, labels: Array<string>) {
 
     let hasNextPage = true;
-
+    
     let endCursor = null;
 
     const issues = new Array<Issue>();
@@ -71,11 +71,11 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
     while (hasNextPage) {
 
         const query = `
-            query($organizationName: String!, $endCursor: String) {
+            query($organizationName: String!, $endCursor: String, $labels: [String!]) {
                 organization(login: $organizationName) {
                     repositories(first: 100, after: $endCursor) {
                         nodes {
-                            issues(first: 100, labels: ["beta"], states: OPEN) {
+                            issues(first: 100, labels: $labels, states: OPEN) {
                                 nodes {
                                     repository {
                                         nameWithOwner
@@ -94,7 +94,7 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
             }
         `;
 
-        const repositories = (await octokit.graphql<{organization: Organization}>(query, { organizationName: context.repo.owner, endCursor })).organization.repositories as RepositoryConnection;
+        const repositories = (await octokit.graphql<{organization: Organization}>(query, { organizationName: context.repo.owner, endCursor, labels })).organization.repositories as RepositoryConnection;
 
         if (repositories.nodes) {
 
