@@ -59,6 +59,57 @@ export function getIssueRepository(issue: {url: string}) {
     return repository;
 }
 
+async function getAllIssuesInOrganization(organizationName: string, octokit: InstanceType<typeof GitHub>) {
+
+    let hasNextPage = true;
+    let endCursor = null;
+    let allIssues = [];
+
+    while (hasNextPage) {
+        const query = `
+            query($orgName: String!, $endCursor: String) {
+                organization(login: $orgName) {
+                    repositories(first: 100, after: $endCursor) {
+                        nodes {
+                            issues(first: 100, labels: ["beta"], states: OPEN) {
+                                nodes {
+                                    repository {
+                                        nameWithOwner
+                                    }
+                                    body
+                                    number
+                                }
+                            }
+                        }
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
+                    }
+                }
+            }
+        `;
+
+        const variables = {
+            orgName: organizationName,
+            endCursor,
+        };
+
+        const { organization } = (await octokit.graphql<{organization: string}>(query, variables));
+
+        const repositories = organization.repositories.nodes;
+        repositories.forEach((repo: any) => {
+            const issues = repo.issues.edges.map((edge: any) => edge.node);
+            allIssues = allIssues.concat(issues);
+        });
+
+        hasNextPage = organization.repositories.pageInfo.hasNextPage;
+        endCursor = organization.repositories.pageInfo.endCursor;
+    }
+
+    return allIssues;
+}
+
 export async function getMarkedIssues(stage: 'beta' | 'production', octokit: InstanceType<typeof GitHub>) {
 
     const filterLabel = stage === 'production' ? 'beta' : 'alpha';
