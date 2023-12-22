@@ -156,11 +156,11 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     const filterLabel = stage === 'production' ? 'beta' : 'alpha';
 
-    const contains = dump({ application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` }).trim();
+    const contains = dump({ application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` }).trim().split('\n').map(line => line.trim());
 
-    info(`Contains: "${contains}"`);
+    info(`Contains: "${inspect(contains, {depth: 10})}".`);
 
-    const issues = (await getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => issue.body.includes(contains));
+    const issues = (await getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => contains.every(phrase => issue.body.includes(phrase)));
 
     startGroup('Issues');
 

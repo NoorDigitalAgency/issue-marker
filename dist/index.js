@@ -122,9 +122,9 @@ function getAllIssuesInOrganization(octokit, labels) {
 function getMarkedIssues(stage, octokit) {
     return __awaiter(this, void 0, void 0, function* () {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
-        const contains = (0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` }).trim();
-        (0, core_1.info)(`Contains: "${contains}"`);
-        const issues = (yield getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => issue.body.includes(contains));
+        const contains = (0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` }).trim().split('\n').map(line => line.trim());
+        (0, core_1.info)(`Contains: "${(0, util_1.inspect)(contains, { depth: 10 })}".`);
+        const issues = (yield getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => contains.every(phrase => issue.body.includes(phrase)));
         (0, core_1.startGroup)('Issues');
         (0, core_1.info)((0, util_1.inspect)(issues, { depth: 10 }));
         (0, core_1.endGroup)();
