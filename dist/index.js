@@ -53,32 +53,55 @@ function getIssueRepository(issue) {
 }
 exports.getIssueRepository = getIssueRepository;
 function getAllIssuesInOrganization(octokit, labels) {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        let repositoriesHasNextPage = true;
-        let repositoriesEndCursor = null;
-        let issuesHasNextPage = true;
-        let issuesEndCursor = null;
-        const issues = new Array();
-        while (repositoriesHasNextPage) {
-            let repositories;
-            while (issuesHasNextPage) {
-                const query = `
-                query($organizationName: String!, $repositoriesEndCursor: String, $issueEndCursor: String, $labels: [String!]) {
+        let hasNextPage = true;
+        let endCursor = null;
+        const targetRepositories = new Array();
+        while (hasNextPage) {
+            const query = `
+                query($organizationName: String!, $endCursor: String, $labels: [String!]) {
                     organization(login: $organizationName) {
-                        repositories(first: 100, after: $repositoriesEndCursor) {
+                        repositories(first: 100, after: $endCursor) {
                             nodes {
-                                issues(first: 100, labels: $labels, states: OPEN, after: $issueEndCursor) {
-                                    nodes {
-                                        repository {
-                                            nameWithOwner
-                                        }
-                                        body
-                                        number
-                                    }
-                                    pageInfo {
-                                        endCursor
-                                        hasNextPage
+                                issues(labels: $labels, states: OPEN) {
+                                    totalCount
+                                }
+                                name
+                                owner {
+                                  login
+                                }
+                            }
+                            pageInfo {
+                                endCursor
+                                hasNextPage
+                            }
+                        }
+                    }
+                }
+            `;
+            const repositories = (yield octokit.graphql(query, { organizationName: github_1.context.repo.owner, endCursor, labels })).organization.repositories;
+            if (repositories.nodes && repositories.nodes.length > 0) {
+                targetRepositories.push(...repositories.nodes.filter(node => { var _a; return (_a = node === null || node === void 0 ? void 0 : node.issues.totalCount) !== null && _a !== void 0 ? _a : 0 > 0; }).map(node => ({ owner: node.owner.login, name: node.name })));
+            }
+            hasNextPage = repositories === null || repositories === void 0 ? void 0 : repositories.pageInfo.hasNextPage;
+            endCursor = repositories === null || repositories === void 0 ? void 0 : repositories.pageInfo.endCursor;
+        }
+        const targetIssues = new Array();
+        for (const targetRepository of targetRepositories) {
+            hasNextPage = true;
+            endCursor = null;
+            while (hasNextPage) {
+                const query = `
+                query($owner: String!, $name: String!, $endCursor: String, $labels: [String!]) {
+                    repository(owner: $owner, name: $name) {
+                        issues(first: 100, after: $endCursor, labels: $labels, states: OPEN) {
+                            nodes {
+                                number
+                                body
+                                repository {
+                                    name
+                                    owner {
+                                        login
                                     }
                                 }
                             }
@@ -90,25 +113,15 @@ function getAllIssuesInOrganization(octokit, labels) {
                     }
                 }
             `;
-                repositories = (yield octokit.graphql(query, { organizationName: github_1.context.repo.owner, endCursor: repositoriesEndCursor, labels })).organization.repositories;
-                if (repositories.nodes) {
-                    for (const repository of repositories.nodes) {
-                        if (repository === null || repository === void 0 ? void 0 : repository.issues.nodes) {
-                            for (const issue of repository.issues.nodes) {
-                                if (issue) {
-                                    issues.push(issue);
-                                }
-                            }
-                            issuesHasNextPage = repository.issues.pageInfo.hasNextPage;
-                            issuesEndCursor = repository.issues.pageInfo.endCursor;
-                        }
-                    }
+                const issues = (yield octokit.graphql(query, { owner: targetRepository.owner, name: targetRepository.name, endCursor, labels })).repository.issues;
+                if ((issues === null || issues === void 0 ? void 0 : issues.nodes) && issues.nodes.length > 0) {
+                    targetIssues.push(...issues.nodes.map(issue => issue));
                 }
+                hasNextPage = issues === null || issues === void 0 ? void 0 : issues.pageInfo.hasNextPage;
+                endCursor = issues === null || issues === void 0 ? void 0 : issues.pageInfo.endCursor;
             }
-            repositoriesHasNextPage = (_a = repositories === null || repositories === void 0 ? void 0 : repositories.pageInfo.hasNextPage) !== null && _a !== void 0 ? _a : false;
-            repositoriesEndCursor = repositories === null || repositories === void 0 ? void 0 : repositories.pageInfo.endCursor;
         }
-        return issues;
+        return targetIssues;
     });
 }
 function getMarkedIssues(stage, octokit) {
@@ -121,19 +134,27 @@ function getMarkedIssues(stage, octokit) {
         (0, core_1.info)((0, util_1.inspect)(items, { depth: 10 }));
         (0, core_1.endGroup)();
         try {
+            const contains = (0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` });
+            (0, core_1.info)(`Dump:\n${contains}`);
             const issues = yield getAllIssuesInOrganization(octokit, [filterLabel]);
             (0, core_1.startGroup)('Issues');
             (0, core_1.info)((0, util_1.inspect)(issues, { depth: 10 }));
             (0, core_1.endGroup)();
+            const filteredIssues = issues.filter(issue => issue.body.includes(contains));
+            (0, core_1.startGroup)('Filtered Issues');
+            (0, core_1.info)((0, util_1.inspect)(filteredIssues, { depth: 10 }));
+            (0, core_1.endGroup)();
+            const githubIssues = [];
+            for (const issue of filteredIssues) {
+                const githubIssue = (yield octokit.rest.issues.get({ owner: issue.repository.owner.login, repo: issue.repository.name, issue_number: issue.number })).data;
+                githubIssues.push(githubIssue);
+            }
+            (0, core_1.startGroup)('GitHub Issues');
+            (0, core_1.info)((0, util_1.inspect)(githubIssues, { depth: 10 }));
+            (0, core_1.endGroup)();
         }
         catch (e) {
             (0, core_1.warning)(`Error getting issues:\n${(0, util_1.inspect)(e, { depth: 10 })}`);
-        }
-        try {
-            (0, core_1.info)(`Dump:\n${(0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` })}`);
-        }
-        catch (e) {
-            (0, core_1.warning)(`Error dumping:\n${(0, util_1.inspect)(e, { depth: 10 })}`);
         }
         return items;
     });

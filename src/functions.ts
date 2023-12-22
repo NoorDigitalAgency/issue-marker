@@ -5,7 +5,13 @@ import {info, endGroup, startGroup, warning} from "@actions/core";
 import {context} from "@actions/github";
 import {inspect} from "util";
 import type {GitHub} from "@actions/github/lib/utils";
-import type {Issue, Organization, RepositoryConnection} from "@octokit/graphql-schema";
+import type {
+    Issue,
+    IssueConnection,
+    Organization,
+    Repository,
+    RepositoryConnection
+} from "@octokit/graphql-schema";
 
 const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 
@@ -66,7 +72,7 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
     
     let endCursor = null;
 
-    const repos = new Array<{owner: string; name: string}>();
+    const targetRepositories = new Array<{owner: string; name: string}>();
 
     while (hasNextPage) {
 
@@ -96,7 +102,7 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
 
         if (repositories.nodes && repositories.nodes.length > 0) {
 
-            repos.push(...repositories.nodes.filter(node => node?.issues.totalCount ?? 0 > 0).map(node => ({owner: node!.owner.login, name: node!.name})));
+            targetRepositories.push(...repositories.nodes.filter(node => node?.issues.totalCount ?? 0 > 0).map(node => ({owner: node!.owner.login, name: node!.name})));
         }
 
         hasNextPage = repositories?.pageInfo.hasNextPage;
@@ -104,9 +110,9 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
         endCursor = repositories?.pageInfo.endCursor;
     }
 
-    const issues = new Array<Issue>();
+    const targetIssues = new Array<Issue>();
 
-    for (const repo of repos) {
+    for (const targetRepository of targetRepositories) {
 
         hasNextPage = true;
 
@@ -115,15 +121,16 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
         while (hasNextPage) {
 
             const query = `
-                query($owner: String!, $repo: String!, $endCursor: String, $labels: [String!]) {
-                    repository(owner: $owner, name: $repo) {
+                query($owner: String!, $name: String!, $endCursor: String, $labels: [String!]) {
+                    repository(owner: $owner, name: $name) {
                         issues(first: 100, after: $endCursor, labels: $labels, states: OPEN) {
                             nodes {
-                                id
+                                number
                                 body
-                                labels(first: 100) {
-                                    nodes {
-                                        name
+                                repository {
+                                    name
+                                    owner {
+                                        login
                                     }
                                 }
                             }
@@ -136,20 +143,20 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
                 }
             `;
 
-            const result = (await octokit.graphql<{repository: {issues: Issue[]}}>(query, {owner: repo.owner, repo: repo.name, endCursor, labels})).repository.issues as IssueConnection;
+            const issues = (await octokit.graphql<{repository: Repository}>(query, {owner: targetRepository.owner, name: targetRepository.name, endCursor, labels})).repository.issues as IssueConnection;
 
-            if (result.nodes && result.nodes.length > 0) {
+            if (issues?.nodes && issues.nodes.length > 0) {
 
-                issues.push(...result.nodes);
+                targetIssues.push(...issues.nodes.map(issue => issue as Issue));
             }
 
-            hasNextPage = result?.pageInfo.hasNextPage;
+            hasNextPage = issues?.pageInfo.hasNextPage;
 
-            endCursor = result?.pageInfo.endCursor;
+            endCursor = issues?.pageInfo.endCursor;
         }
     }
 
-    return [];
+    return targetIssues;
 }
 
 export async function getMarkedIssues(stage: 'beta' | 'production', octokit: InstanceType<typeof GitHub>) {
@@ -170,6 +177,10 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     try {
 
+        const contains = dump({ application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` });
+
+        info(`Dump:\n${contains}`);
+
         const issues = await getAllIssuesInOrganization(octokit, [filterLabel]);
 
         startGroup('Issues');
@@ -178,18 +189,32 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
         endGroup();
 
+        const filteredIssues = issues.filter(issue => issue.body.includes(contains));
+
+        startGroup('Filtered Issues');
+
+        info(inspect(filteredIssues, {depth: 10}));
+
+        endGroup();
+
+        const githubIssues = [];
+
+        for (const issue of filteredIssues) {
+
+            const githubIssue = (await octokit.rest.issues.get({ owner: issue.repository.owner.login, repo: issue.repository.name, issue_number: issue.number })).data;
+
+            githubIssues.push(githubIssue);
+        }
+
+        startGroup('GitHub Issues');
+
+        info(inspect(githubIssues, {depth: 10}));
+
+        endGroup();
+
     } catch (e) {
 
         warning(`Error getting issues:\n${inspect(e, {depth: 10})}`);
-    }
-
-    try {
-
-        info(`Dump:\n${dump({ application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` })}`);
-
-    } catch (e) {
-
-        warning(`Error dumping:\n${inspect(e, {depth: 10})}`);
     }
 
     return items;
