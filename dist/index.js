@@ -181,7 +181,7 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
                 for (const link of links) {
                     const issue = (yield octokit.rest.issues.get({ owner: (_c = link.owner) !== null && _c !== void 0 ? _c : owner, repo: (_d = link.repo) !== null && _d !== void 0 ? _d : repo, issue_number: +link.issue })).data;
                     if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => { var _a; return (_a = (typeof (label) === 'string' ? label : label.name)) !== null && _a !== void 0 ? _a : '' !== stageLabel; }))) {
-                        const repository = `${issue.repository.owner}/${issue.repository.name}`;
+                        const { repository } = issue.url.match(issueRegex).groups;
                         issues.push(Object.assign(Object.assign({ id: `${repository}#${link.issue}` }, getIssueMetadata({ stage, body: (_e = issue.body) !== null && _e !== void 0 ? _e : '', commit: merge.hash, repository: `${owner}/${repo}`, version })), { labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
                                 .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string') }));
                     }

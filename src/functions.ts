@@ -257,7 +257,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
                 if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
-                    const repository = `${issue.repository!.owner}/${issue.repository!.name}`;
+                    const { repository } = issue.url.match(issueRegex)!.groups!;
 
                     issues.push({
 
