@@ -171,6 +171,11 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
     return issues;
 }
 
+export function getIssueRepository(issue: Issue) {
+
+    return issue.repository && issue.repository.owner ? `${issue.repository?.owner?.login}/${issue.repository?.name}` : '';
+}
+
 export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
 
     const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
@@ -276,7 +281,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         for (const issue of items) {
 
-            const repository = `${issue.repository.owner.login}/${issue.repository.name}`;
+            const repository = getIssueRepository(issue);
 
             info(`Issue ${repository}#${issue.number}`);
 

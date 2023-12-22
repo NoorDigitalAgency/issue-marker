@@ -16,7 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getMarkedIssues = exports.getIssueMetadata = void 0;
+exports.refineLabels = exports.deconstructIssueId = exports.getTargetIssues = exports.getIssueRepository = exports.getMarkedIssues = exports.getIssueMetadata = void 0;
 const js_yaml_1 = __nccwpck_require__(7021);
 const exec_1 = __nccwpck_require__(5082);
 const core_1 = __nccwpck_require__(9483);
@@ -132,6 +132,11 @@ function getMarkedIssues(stage, octokit) {
     });
 }
 exports.getMarkedIssues = getMarkedIssues;
+function getIssueRepository(issue) {
+    var _a, _b, _c;
+    return issue.repository && issue.repository.owner ? `${(_b = (_a = issue.repository) === null || _a === void 0 ? void 0 : _a.owner) === null || _b === void 0 ? void 0 : _b.login}/${(_c = issue.repository) === null || _c === void 0 ? void 0 : _c.name}` : '';
+}
+exports.getIssueRepository = getIssueRepository;
 function getTargetIssues(stage, version, previousVersion, reference, octokit) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     return __awaiter(this, void 0, void 0, function* () {
@@ -187,7 +192,7 @@ function getTargetIssues(stage, version, previousVersion, reference, octokit) {
             const currentBranch = stage === 'production' ? 'main' : 'release';
             const items = yield getMarkedIssues(stage, octokit);
             for (const issue of items) {
-                const repository = `${issue.repository.owner.login}/${issue.repository.name}`;
+                const repository = getIssueRepository(issue);
                 (0, core_1.info)(`Issue ${repository}#${issue.number}`);
                 const { body, commit } = getIssueMetadata({ stage, body: (_f = issue.body) !== null && _f !== void 0 ? _f : '', version, commit: reference });
                 (0, core_1.startGroup)('Issue Body');
