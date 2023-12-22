@@ -52,20 +52,89 @@ function getIssueRepository(issue) {
     return repository;
 }
 exports.getIssueRepository = getIssueRepository;
+function getAllIssuesInOrganization(octokit, labels) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        let repositoriesHasNextPage = true;
+        let repositoriesEndCursor = null;
+        let issuesHasNextPage = true;
+        let issuesEndCursor = null;
+        const issues = new Array();
+        while (repositoriesHasNextPage) {
+            let repositories;
+            while (issuesHasNextPage) {
+                const query = `
+                query($organizationName: String!, $repositoriesEndCursor: String, $issueEndCursor: String, $labels: [String!]) {
+                    organization(login: $organizationName) {
+                        repositories(first: 100, after: $repositoriesEndCursor) {
+                            nodes {
+                                issues(first: 100, labels: $labels, states: OPEN, after: $issueEndCursor) {
+                                    nodes {
+                                        repository {
+                                            nameWithOwner
+                                        }
+                                        body
+                                        number
+                                    }
+                                    pageInfo {
+                                        endCursor
+                                        hasNextPage
+                                    }
+                                }
+                            }
+                            pageInfo {
+                                endCursor
+                                hasNextPage
+                            }
+                        }
+                    }
+                }
+            `;
+                repositories = (yield octokit.graphql(query, { organizationName: github_1.context.repo.owner, endCursor: repositoriesEndCursor, labels })).organization.repositories;
+                if (repositories.nodes) {
+                    for (const repository of repositories.nodes) {
+                        if (repository === null || repository === void 0 ? void 0 : repository.issues.nodes) {
+                            for (const issue of repository.issues.nodes) {
+                                if (issue) {
+                                    issues.push(issue);
+                                }
+                            }
+                            issuesHasNextPage = repository.issues.pageInfo.hasNextPage;
+                            issuesEndCursor = repository.issues.pageInfo.endCursor;
+                        }
+                    }
+                }
+            }
+            repositoriesHasNextPage = (_a = repositories === null || repositories === void 0 ? void 0 : repositories.pageInfo.hasNextPage) !== null && _a !== void 0 ? _a : false;
+            repositoriesEndCursor = repositories === null || repositories === void 0 ? void 0 : repositories.pageInfo.endCursor;
+        }
+        return issues;
+    });
+}
 function getMarkedIssues(stage, octokit) {
     return __awaiter(this, void 0, void 0, function* () {
         const filterLabel = stage === 'production' ? 'beta' : 'alpha';
         const query = `"application: 'issue-marker'" AND "repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'" type:issue state:open in:body label:${filterLabel}`;
         (0, core_1.info)(`Query: ${query}`);
         const items = (yield octokit.rest.search.issuesAndPullRequests({ q: query })).data.items;
-        (0, core_1.info)(`Items: ${(0, util_1.inspect)(items, { depth: 10 })}`);
-        const filteredItems = items.filter(item => {
-            var _a, _b;
-            return ((_a = item.body) === null || _a === void 0 ? void 0 : _a.includes('application: \'issue-marker\'')) &&
-                ((_b = item.body) === null || _b === void 0 ? void 0 : _b.includes(`repository: '${github_1.context.repo.owner}/${github_1.context.repo.repo}'`)) &&
-                item.labels.map(label => label.name).includes(filterLabel) && item.state === 'open';
-        });
-        (0, core_1.info)(`Filtered Items: ${(0, util_1.inspect)(filteredItems, { depth: 10 })}`);
+        (0, core_1.startGroup)('Items');
+        (0, core_1.info)((0, util_1.inspect)(items, { depth: 10 }));
+        (0, core_1.endGroup)();
+        try {
+            const issues = yield getAllIssuesInOrganization(octokit, [filterLabel]);
+            (0, core_1.startGroup)('Issues');
+            (0, core_1.info)((0, util_1.inspect)(issues, { depth: 10 }));
+            (0, core_1.endGroup)();
+        }
+        catch (e) {
+            (0, core_1.warning)(`Error getting issues:\n${(0, util_1.inspect)(e, { depth: 10 })}`);
+        }
+        try {
+            (0, core_1.info)(`Dump:\n${(0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` })}`);
+        }
+        catch (e) {
+            (0, core_1.warning)(`Error dumping:\n${(0, util_1.inspect)(e, { depth: 10 })}`);
+        }
         return items;
     });
 }
