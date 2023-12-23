@@ -149,6 +149,12 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
         }
     }
 
+    startGroup('All Issues');
+
+    info(inspect(targetIssues, {depth: 10}));
+
+    endGroup();
+
     return targetIssues;
 }
 
@@ -162,7 +168,7 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     const issues = (await getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => contains.every(phrase => issue.body.includes(phrase)));
 
-    startGroup('Issues');
+    startGroup('Marked Issues');
 
     info(inspect(issues, {depth: 10}));
 

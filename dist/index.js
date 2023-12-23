@@ -116,6 +116,9 @@ function getAllIssuesInOrganization(octokit, labels) {
                 endCursor = issues === null || issues === void 0 ? void 0 : issues.pageInfo.endCursor;
             }
         }
+        (0, core_1.startGroup)('All Issues');
+        (0, core_1.info)((0, util_1.inspect)(targetIssues, { depth: 10 }));
+        (0, core_1.endGroup)();
         return targetIssues;
     });
 }
@@ -125,7 +128,7 @@ function getMarkedIssues(stage, octokit) {
         const contains = (0, js_yaml_1.dump)({ application: 'issue-marker', repository: `${github_1.context.repo.owner}/${github_1.context.repo.repo}` }).trim().split('\n').map(line => line.trim());
         (0, core_1.info)(`Contains: "${(0, util_1.inspect)(contains, { depth: 10 })}".`);
         const issues = (yield getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => contains.every(phrase => issue.body.includes(phrase)));
-        (0, core_1.startGroup)('Issues');
+        (0, core_1.startGroup)('Marked Issues');
         (0, core_1.info)((0, util_1.inspect)(issues, { depth: 10 }));
         (0, core_1.endGroup)();
         return issues;
