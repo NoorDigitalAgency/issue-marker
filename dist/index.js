@@ -87,28 +87,35 @@ function getAllIssuesInOrganization(octokit, labels) {
             endCursor = null;
             while (hasNextPage) {
                 const query = `
-                query($owner: String!, $name: String!, $endCursor: String, $labels: [String!]) {
-                    repository(owner: $owner, name: $name) {
-                        issues(first: 100, after: $endCursor, labels: $labels, states: OPEN) {
+                query($owner: String!, $name: String!, $endCursor: String, $labels: [String!]){
+                  organization(login: $owner) {
+                    repository(name: $name) {
+                      issues(first: 100, after: $endCursor, labels: $labels, states: OPEN) {
+                        nodes {
+                          number
+                          body
+                          labels(first: 100) {
                             nodes {
-                                number
-                                body
-                                repository {
-                                    name
-                                    owner {
-                                        login
-                                    }
-                                }
+                              name
                             }
-                            pageInfo {
-                                endCursor
-                                hasNextPage
+                          }
+                          repository {
+                            name
+                            owner {
+                              login
                             }
+                          }
                         }
+                        pageInfo {
+                          endCursor
+                          hasNextPage
+                        }
+                      }
                     }
+                  }
                 }
             `;
-                const issues = (yield octokit.graphql(query, { owner: targetRepository.owner, name: targetRepository.name, endCursor, labels })).repository.issues;
+                const issues = (yield octokit.graphql(query, { owner: targetRepository.owner, name: targetRepository.name, endCursor, labels })).organization.repository.issues;
                 if ((issues === null || issues === void 0 ? void 0 : issues.nodes) && issues.nodes.length > 0) {
                     targetIssues.push(...issues.nodes.map(issue => issue));
                 }
