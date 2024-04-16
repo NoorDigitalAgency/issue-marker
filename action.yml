@@ -28,5 +28,5 @@ inputs:
       required: false
       description: ZenHub's Workspace Id
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
