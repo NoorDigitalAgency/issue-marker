@@ -12,6 +12,7 @@ import type {
     Repository,
     RepositoryConnection
 } from "@octokit/graphql-schema";
+import { ZenHubClient } from "@noordigitalagency/zenhub-client";
 
 const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 
@@ -20,6 +21,8 @@ const closerComment = '<!--DO NOT EDIT THE BLOCK ABOVE THIS COMMENT-->';
 const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-marker">.*?\`\`\`yaml\\s+(?<yaml>.*?)\\s+\`\`\`.*?<\\/details>(?:\\s*${closerComment})?\\s+`, 'ims');
 
 const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
+
+export type IssueState = 'open' | 'closed' | undefined;
 
 export function getIssueMetadata (configuration: {stage: 'alpha'; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; body: string; version: string; commit: string}) {
 
@@ -354,4 +357,25 @@ export function refineLabels(labels: Array<string>, body: string, stage: string)
     const needsTest = testStageRegex.test(body);
 
     return labels.filter(label => !['alpha', 'beta', 'production', 'test', 'approved'].includes(label)).concat([stage, ...(needsTest ? ['test'] : [])]);
+}
+
+export async function updateEpicOfIssue(owner: string, repo: string, issue_number: number, client: ZenHubClient, octokit: InstanceType<typeof GitHub>) {
+    const parentEpics = await client.getParentEpics(owner, repo, issue_number);
+    for (let i = 0; i < parentEpics.length; i++) {
+        const epic = parentEpics[i];
+
+        if (epic.childIssues.nodes.every(child => child.state.toLowerCase() === 'closed')
+            && epic.issue.state.toLowerCase() !== 'closed'
+            && epic.issue.labels.nodes.every(label => label.name.toLowerCase() !== 'test')) {
+
+            await octokit.rest.issues.update({
+                owner: owner,
+                repo: epic.issue.repository.name,
+                issue_number: epic.issue.number,
+                state: 'closed'
+            });
+
+            await updateEpicOfIssue(owner, epic.issue.repository.name, epic.issue.number, client, octokit);
+        }
+    }
 }

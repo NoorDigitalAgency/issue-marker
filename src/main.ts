@@ -1,7 +1,7 @@
 import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getOctokit } from '@actions/github';
 import { inspect } from 'util';
-import { deconstructIssueId, getTargetIssues, refineLabels } from './functions';
+import { deconstructIssueId, getTargetIssues, refineLabels, IssueState, updateEpicOfIssue } from './functions';
 import { ZenHubClient } from "@noordigitalagency/zenhub-client";
 
 async function run(): Promise<void> {
@@ -83,7 +83,11 @@ async function run(): Promise<void> {
 
         const needsTest = issue.labels.map(label => label.trim().toLowerCase()).includes('test');
 
-        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && !needsTest && stage === 'production' ? 'closed' : undefined});
+        let state: IssueState = close && !needsTest && stage === 'production' ? 'closed' : undefined;
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: state });
+
+        if (state === 'closed')
+          await updateEpicOfIssue(owner, repo, +number, client, octokit);
 
       } catch (error) {
 
