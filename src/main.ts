@@ -86,7 +86,7 @@ async function run(): Promise<void> {
         let state: IssueState = close && !needsTest && stage === 'production' ? 'closed' : undefined;
         await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: state });
 
-        if (state == 'closed')
+        if (state === 'closed')
           await updateEpicOfIssue(owner, repo, +number, client, octokit);
 
       } catch (error) {

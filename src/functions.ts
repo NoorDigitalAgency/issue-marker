@@ -364,9 +364,9 @@ export async function updateEpicOfIssue(owner: string, repo: string, issue_numbe
     for (let i = 0; i < parentEpics.length; i++) {
         const epic = parentEpics[i];
 
-        if (epic.childIssues.nodes.every(child => child.state.toLowerCase() == 'closed')
-            && epic.issue.state.toLowerCase() != 'closed'
-            && epic.issue.labels.nodes.every(label => label.name.toLowerCase() != 'test')) {
+        if (epic.childIssues.nodes.every(child => child.state.toLowerCase() === 'closed')
+            && epic.issue.state.toLowerCase() !== 'closed'
+            && epic.issue.labels.nodes.every(label => label.name.toLowerCase() !== 'test')) {
 
             await octokit.rest.issues.update({
                 owner: owner,
