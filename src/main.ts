@@ -1,7 +1,7 @@
 import { debug, endGroup, getBooleanInput, getInput, startGroup, warning } from '@actions/core';
 import { getOctokit } from '@actions/github';
 import { inspect } from 'util';
-import { deconstructIssueId, getTargetIssues, refineLabels } from './functions';
+import { deconstructIssueId, getTargetIssues, refineLabels, IssueState, updateEpicOfIssue } from './functions';
 import { ZenHubClient } from "@noordigitalagency/zenhub-client";
 
 async function run(): Promise<void> {
@@ -14,7 +14,7 @@ async function run(): Promise<void> {
 
     const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
 
-    const version = getInput('version', {required: true});
+    const version = getInput('version', { required: true });
 
     debug(`Version: '${version}'.`);
 
@@ -30,11 +30,11 @@ async function run(): Promise<void> {
 
       throw new Error(`Version '${version}' and Previous Version '${previousVersion}' are from different stages.`);
 
-    const token = getInput('token', {required: true});
+    const token = getInput('token', { required: true });
 
     debug(`Token: '${token}'.`);
 
-    const reference = getInput('reference', {required: true});
+    const reference = getInput('reference', { required: true });
 
     debug(`Reference: '${reference}'.`);
 
@@ -60,7 +60,7 @@ async function run(): Promise<void> {
 
     const client = new ZenHubClient(zenHubKey, zenHubWorkspace, octokit);
 
-    const issues = (await getTargetIssues(stage!, version, previousVersion, reference, octokit)).map(issue => ({...issue, labels: refineLabels(issue.labels, issue.body, stage!)}));
+    const issues = (await getTargetIssues(stage!, version, previousVersion, reference, octokit)).map(issue => ({ ...issue, labels: refineLabels(issue.labels, issue.body, stage!) }));
 
     if (issues.length === 0) throw new Error('No issues to mark.');
 
@@ -74,7 +74,7 @@ async function run(): Promise<void> {
 
       try {
 
-        const {owner, repo, number} = deconstructIssueId(issue);
+        const { owner, repo, number } = deconstructIssueId(issue);
 
         if (client.enabled) {
 
@@ -83,7 +83,11 @@ async function run(): Promise<void> {
 
         const needsTest = issue.labels.map(label => label.trim().toLowerCase()).includes('test');
 
-        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: close && !needsTest && stage === 'production' ? 'closed' : undefined});
+        let state: IssueState = close && !needsTest && stage === 'production' ? 'closed' : undefined;
+        await octokit.rest.issues.update({ owner, repo, issue_number: +number, body: issue.body, labels: issue.labels, state: state });
+
+        if (state == 'closed')
+          await updateEpicOfIssue(owner, repo, +number, client, octokit);
 
       } catch (error) {
 

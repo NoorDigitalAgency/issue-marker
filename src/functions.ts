@@ -1,10 +1,10 @@
 import { load, dump } from 'js-yaml';
-import {Link, Metadata} from './types';
-import {getExecOutput} from "@actions/exec";
-import {info, endGroup, startGroup, warning} from "@actions/core";
-import {context} from "@actions/github";
-import {inspect} from "util";
-import type {GitHub} from "@actions/github/lib/utils";
+import { Link, Metadata } from './types';
+import { getExecOutput } from "@actions/exec";
+import { info, endGroup, startGroup, warning } from "@actions/core";
+import { context } from "@actions/github";
+import { inspect } from "util";
+import type { GitHub } from "@actions/github/lib/utils";
 import type {
     Issue,
     IssueConnection,
@@ -12,6 +12,7 @@ import type {
     Repository,
     RepositoryConnection
 } from "@octokit/graphql-schema";
+import { ZenHubClient } from "@noordigitalagency/zenhub-client";
 
 const openerComment = '<!--DO NOT EDIT THE BLOCK BELOW THIS COMMENT-->';
 
@@ -21,9 +22,11 @@ const regex = new RegExp(`\\s+(?:${openerComment}\\s*)?<details data-id="issue-m
 
 const issueRegex = /https:\/\/api\.github\.com\/repos\/(?<repository>.+?)\/issues\/\d+/;
 
-export function getIssueMetadata (configuration: {stage: 'alpha'; body: string; version: string; commit: string; repository: string} | {stage: 'beta' | 'production'; body: string; version: string; commit: string}) {
+export type IssueState = 'open' | 'closed' | undefined;
 
-    const { stage, body } = {...configuration};
+export function getIssueMetadata(configuration: { stage: 'alpha'; body: string; version: string; commit: string; repository: string } | { stage: 'beta' | 'production'; body: string; version: string; commit: string }) {
+
+    const { stage, body } = { ...configuration };
 
     const metadataYaml = (body ?? '').match(regex)?.groups?.yaml;
 
@@ -34,9 +37,9 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; body: string; 
 
     const { commit, repository, version, history } = configuration.stage === 'alpha' ?
 
-        {...configuration, history: [{version: configuration.version, commit: configuration.commit}, ...(typeof(metadataYaml) === 'string' && metadataYaml !== '' ? {...load(metadataYaml) as Metadata}?.history ?? [] : [])]} :
+        { ...configuration, history: [{ version: configuration.version, commit: configuration.commit }, ...(typeof (metadataYaml) === 'string' && metadataYaml !== '' ? { ...load(metadataYaml) as Metadata }?.history ?? [] : [])] } :
 
-        {...load(metadataYaml!) as Metadata};
+        { ...load(metadataYaml!) as Metadata };
 
     const metadata = { application: 'issue-marker', repository, version, commit, history } as Metadata;
 
@@ -46,15 +49,15 @@ export function getIssueMetadata (configuration: {stage: 'alpha'; body: string; 
 
         metadata.commit = configuration.commit;
 
-        metadata.history = [{version: configuration.version, commit: configuration.commit}, ...history];
+        metadata.history = [{ version: configuration.version, commit: configuration.commit }, ...history];
     }
 
-    const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summarizeMetadata(dump(metadata, {forceQuotes: true, quotingType: "'"}))}\n\n`;
+    const outputBody = `${regex.test(body) ? body.replace(regex, '\n\n') : body ?? ''}\n\n${summarizeMetadata(dump(metadata, { forceQuotes: true, quotingType: "'" }))}\n\n`;
 
     return { body: outputBody, commit };
 }
 
-function summarizeMetadata (metadata: string) {
+function summarizeMetadata(metadata: string) {
 
     return `${openerComment}\n<details data-id="issue-marker">\n<summary>Issue Marker's Metadata</summary>\n\n\`\`\`yaml\n${metadata}\`\`\`\n</details>\n${closerComment}`;
 }
@@ -62,10 +65,10 @@ function summarizeMetadata (metadata: string) {
 async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, labels: Array<string>) {
 
     let hasNextPage = true;
-    
+
     let endCursor = null;
 
-    const targetRepositories = new Array<{owner: string; name: string}>();
+    const targetRepositories = new Array<{ owner: string; name: string }>();
 
     while (hasNextPage) {
 
@@ -91,11 +94,11 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
                 }
             `;
 
-        const repositories = (await octokit.graphql<{organization: Organization}>(query, {organizationName: context.repo.owner, endCursor, labels })).organization.repositories as RepositoryConnection;
+        const repositories = (await octokit.graphql<{ organization: Organization }>(query, { organizationName: context.repo.owner, endCursor, labels })).organization.repositories as RepositoryConnection;
 
         if (repositories.nodes && repositories.nodes.length > 0) {
 
-            targetRepositories.push(...repositories.nodes.filter(node => node?.issues.totalCount ?? 0 > 0).map(node => ({owner: node!.owner.login, name: node!.name})));
+            targetRepositories.push(...repositories.nodes.filter(node => node?.issues.totalCount ?? 0 > 0).map(node => ({ owner: node!.owner.login, name: node!.name })));
         }
 
         hasNextPage = repositories?.pageInfo.hasNextPage;
@@ -143,7 +146,7 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
                 }
             `;
 
-            const issues = (await octokit.graphql<{organization: Organization}>(query, {owner: targetRepository.owner, name: targetRepository.name, endCursor, labels})).organization!.repository!.issues as IssueConnection;
+            const issues = (await octokit.graphql<{ organization: Organization }>(query, { owner: targetRepository.owner, name: targetRepository.name, endCursor, labels })).organization!.repository!.issues as IssueConnection;
 
             if (issues?.nodes && issues.nodes.length > 0) {
 
@@ -158,7 +161,7 @@ async function getAllIssuesInOrganization(octokit: InstanceType<typeof GitHub>, 
 
     startGroup('All Issues');
 
-    info(inspect(targetIssues, {depth: 10}));
+    info(inspect(targetIssues, { depth: 10 }));
 
     endGroup();
 
@@ -171,15 +174,15 @@ export async function getMarkedIssues(stage: 'beta' | 'production', octokit: Ins
 
     const marker = { application: 'issue-marker', repository: `${context.repo.owner}/${context.repo.repo}` };
 
-    const contains = dump(marker, {forceQuotes: true, quotingType: "'"}).trim();
+    const contains = dump(marker, { forceQuotes: true, quotingType: "'" }).trim();
 
-    info(`Contains: "${inspect(contains, {depth: 10})}".`);
+    info(`Contains: "${inspect(contains, { depth: 10 })}".`);
 
     const issues = (await getAllIssuesInOrganization(octokit, [filterLabel])).filter(issue => issue.body.includes(contains));
 
     startGroup('Marked Issues');
 
-    info(inspect(issues, {depth: 10}));
+    info(inspect(issues, { depth: 10 }));
 
     endGroup();
 
@@ -191,7 +194,7 @@ export function getIssueRepository(issue: Issue) {
     return issue.repository && issue.repository.owner ? `${issue.repository?.owner?.login}/${issue.repository?.name}` : '';
 }
 
-export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{id: string; body: string; labels: Array<string>}>> {
+export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', version: string, previousVersion: string, reference: string, octokit: InstanceType<typeof GitHub>): Promise<Array<{ id: string; body: string; labels: Array<string> }>> {
 
     const logRegex = /^(?<hash>[0-9a-f]{40}) Merge pull request #(?<number>\d+) from .+?$/mg;
 
@@ -199,7 +202,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
     const linkRegex = /(?:(?<owner>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?)\/(?<repo>[A-Za-z0-9-._]+))?#(?<issue>\d+)/ig;
 
-    const issues = new Array<{id: string; body: string; labels: Array<string>}>();
+    const issues = new Array<{ id: string; body: string; labels: Array<string> }>();
 
     if (stage === 'alpha') {
 
@@ -217,7 +220,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
         endGroup();
 
-        const merges = [...(log.matchAll(logRegex) ?? [])].map(merge => ({hash: merge.groups!.hash!, number: +merge.groups!.number!}));
+        const merges = [...(log.matchAll(logRegex) ?? [])].map(merge => ({ hash: merge.groups!.hash!, number: +merge.groups!.number! }));
 
         if (merges.length === 0) {
 
@@ -270,7 +273,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
                 const issue = (await octokit.rest.issues.get({ owner: link.owner ?? owner, repo: link.repo ?? repo, issue_number: +link.issue })).data;
 
-                if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof(label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
+                if (issue.state !== 'closed' && !issue.pull_request && issue.labels.every(label => ['beta', 'production'].every(stageLabel => (typeof (label) === 'string' ? label : label.name) ?? '' !== stageLabel))) {
 
                     const { repository } = issue.url.match(issueRegex)!.groups!;
 
@@ -278,11 +281,11 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
                         id: `${repository}#${link.issue}`,
 
-                        ...getIssueMetadata({stage, body: issue.body ?? '', commit: merge.hash, repository: `${owner}/${repo}`, version}),
+                        ...getIssueMetadata({ stage, body: issue.body ?? '', commit: merge.hash, repository: `${owner}/${repo}`, version }),
 
-                        labels: issue.labels.filter(label => typeof(label) === 'string' ? label : label.name)
+                        labels: issue.labels.filter(label => typeof (label) === 'string' ? label : label.name)
 
-                            .map(label => typeof(label) === 'string' ? label : label.name).filter(label => typeof(label) === 'string') as Array<string>
+                            .map(label => typeof (label) === 'string' ? label : label.name).filter(label => typeof (label) === 'string') as Array<string>
                     });
                 }
             }
@@ -300,7 +303,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             info(`Issue ${repository}#${issue.number}`);
 
-            const {body, commit} = getIssueMetadata({stage, body: issue.body ?? '', version, commit: reference});
+            const { body, commit } = getIssueMetadata({ stage, body: issue.body ?? '', version, commit: reference });
 
             startGroup('Issue Body');
 
@@ -320,7 +323,7 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
 
             try {
 
-                await getExecOutput('git', ['branch', '-r', '--contains', commit], {listeners: {stderr: (data: Buffer) => error += data.toString(), stdout: (data: Buffer) => branches += data.toString()}});
+                await getExecOutput('git', ['branch', '-r', '--contains', commit], { listeners: { stderr: (data: Buffer) => error += data.toString(), stdout: (data: Buffer) => branches += data.toString() } });
 
                 const labels = issue.labels?.nodes?.map(label => label?.name ?? '').filter(label => label !== '') ?? [];
 
@@ -340,11 +343,11 @@ export async function getTargetIssues(stage: 'alpha' | 'beta' | 'production', ve
     return issues;
 }
 
-export function deconstructIssueId(issue: {id: string; body: string; labels: Array<string>}): {owner: string; repo: string; number: string} {
+export function deconstructIssueId(issue: { id: string; body: string; labels: Array<string> }): { owner: string; repo: string; number: string } {
 
     const idRegex = /^(?<owner>.+?)\/(?<repo>.+?)#(?<number>\d+)$/;
 
-    return issue.id.match(idRegex)!.groups! as {owner: string; repo: string; number: string};
+    return issue.id.match(idRegex)!.groups! as { owner: string; repo: string; number: string };
 }
 
 export function refineLabels(labels: Array<string>, body: string, stage: string): Array<string> {
@@ -354,4 +357,25 @@ export function refineLabels(labels: Array<string>, body: string, stage: string)
     const needsTest = testStageRegex.test(body);
 
     return labels.filter(label => !['alpha', 'beta', 'production', 'test', 'approved'].includes(label)).concat([stage, ...(needsTest ? ['test'] : [])]);
+}
+
+export async function updateEpicOfIssue(owner: string, repo: string, issue_number: number, client: ZenHubClient, octokit: InstanceType<typeof GitHub>) {
+    const parentEpics = await client.getParentEpics(owner, repo, issue_number);
+    for (let i = 0; i < parentEpics.length; i++) {
+        const epic = parentEpics[i];
+
+        if (epic.childIssues.nodes.every(child => child.state.toLowerCase() == 'closed')
+            && epic.issue.state.toLowerCase() != 'closed'
+            && epic.issue.labels.nodes.every(label => label.name.toLowerCase() != 'test')) {
+
+            await octokit.rest.issues.update({
+                owner: owner,
+                repo: epic.issue.repository.name,
+                issue_number: epic.issue.number,
+                state: 'closed'
+            });
+
+            await updateEpicOfIssue(owner, epic.issue.repository.name, epic.issue.number, client, octokit);
+        }
+    }
 }
