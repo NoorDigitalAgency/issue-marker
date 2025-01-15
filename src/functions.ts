@@ -1,7 +1,7 @@
 import { load, dump } from 'js-yaml';
 import {Link, Metadata} from './types';
 import {getExecOutput} from "@actions/exec";
-import {info, endGroup, startGroup, warning} from "@actions/core";
+import {debug, info, endGroup, startGroup, warning} from "@actions/core";
 import {context} from "@actions/github";
 import {inspect} from "util";
 import type {GitHub} from "@actions/github/lib/utils";
@@ -363,19 +363,34 @@ export async function updateEpicOfIssue(owner: string, repo: string, issue_numbe
     const parentEpics = await client.getParentEpics(owner, repo, issue_number);
     for (let i = 0; i < parentEpics.length; i++) {
         const epic = parentEpics[i];
-
-        if (epic.childIssues.nodes.every(child => child.state.toLowerCase() === 'closed')
-            && epic.issue.state.toLowerCase() !== 'closed'
+        debug('checking epic to close');
+        debug(inspect(epic));
+        if (epic.issue.state.toLowerCase() !== 'closed'
             && epic.issue.labels.nodes.every(label => label.name.toLowerCase() !== 'test')) {
 
-            await octokit.rest.issues.update({
-                owner: owner,
-                repo: epic.issue.repository.name,
-                issue_number: epic.issue.number,
-                state: 'closed'
-            });
+            let allChildIsClosed = true;
+            epic.childIssues.nodes.filter(child => child.state.toLowerCase() !== 'closed')
+                .forEach(async child => {
+                    const issue = await octokit.rest.issues.get({ owner, repo: child.repository.name, issue_number: child.number });
 
-            await updateEpicOfIssue(owner, epic.issue.repository.name, epic.issue.number, client, octokit);
+                    debug(inspect(issue.data));
+
+                    if (issue.data.state !== 'closed')
+                        allChildIsClosed = false;
+                });
+            
+            if (allChildIsClosed) {
+                debug(`epic ${epic.issue.repository.name}#${epic.issue.number} is closing`);
+
+                await octokit.rest.issues.update({
+                    owner: owner,
+                    repo: epic.issue.repository.name,
+                    issue_number: epic.issue.number,
+                    state: 'closed'
+                });
+
+                await updateEpicOfIssue(owner, epic.issue.repository.name, epic.issue.number, client, octokit);
+            }
         }
     }
 }
