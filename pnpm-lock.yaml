@@ -18,8 +18,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1
       '@noordigitalagency/zenhub-client':
-        specifier: 2025.1.0
-        version: 2025.1.0
+        specifier: 2025.3.0
+        version: 2025.3.0
       '@octokit/graphql-schema':
         specifier: ^14.45.1
         version: 14.45.1
@@ -64,8 +64,8 @@ packages:
     resolution: {integrity: sha512-+KpH+QxZU7O4675t3mnkQKcZZg56u+K/Ct2K+N2AZYNVK8kyeo/bI18tI8aPm3tvNNRyTWfj6s5tnGNlcbQRsA==}
     engines: {node: '>=14'}
 
-  '@noordigitalagency/zenhub-client@2025.1.0':
-    resolution: {integrity: sha512-waG7GaTaaEuJxtv3hDtlid5IFCak+nEBbPQBB5c1wpD9jaBy8vmsXPO0JDCWLx2aHfOCrneAZPqzEhhUFsBQyQ==, tarball: https://npm.pkg.github.com/download/@noordigitalagency/zenhub-client/2025.1.0/a7b35eb48e97d003e9bd73bc2c4c998dc0b56639}
+  '@noordigitalagency/zenhub-client@2025.3.0':
+    resolution: {integrity: sha512-OUMgXrqSRu+fm+ejEXplBZMMaM7Wjta/uUifl+8POZmHY3pTlcdP0cMKH8RsX/mHw2yEljzpBoRevYIuikDQxA==, tarball: https://npm.pkg.github.com/download/@noordigitalagency/zenhub-client/2025.3.0/3e5c6380b4a79dc1a4814e960c032ce8875e0de2}
 
   '@octokit/auth-token@2.5.0':
     resolution: {integrity: sha512-r5FVUJCOLl19AxiuZD2VRZ/ORjp/4IN98Of6YJoJOkY75CIBuYfmiNHGrDwXr+aLGG55igl9QrxX3hbiXlLb+g==}
@@ -258,7 +258,7 @@ snapshots:
 
   '@fastify/busboy@2.1.0': {}
 
-  '@noordigitalagency/zenhub-client@2025.1.0':
+  '@noordigitalagency/zenhub-client@2025.3.0':
     dependencies:
       '@actions/core': 1.10.1
       '@actions/github': 5.1.1

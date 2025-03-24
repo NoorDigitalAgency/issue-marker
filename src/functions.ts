@@ -363,21 +363,17 @@ export async function updateEpicOfIssue(owner: string, repo: string, issue_numbe
     const parentEpics = await client.getParentEpics(owner, repo, issue_number);
     for (let i = 0; i < parentEpics.length; i++) {
         const epic = parentEpics[i];
-        debug('checking epic to close');
+        debug(`checking epic(${epic.issue.repository}#${epic.issue.number}) to close`);
         debug(inspect(epic));
         if (epic.issue.state.toLowerCase() !== 'closed'
             && epic.issue.labels.nodes.every(label => label.name.toLowerCase() !== 'test')) {
 
             let allChildIsClosed = true;
-            epic.childIssues.nodes.filter(child => child.state.toLowerCase() !== 'closed')
-                .forEach(async child => {
-                    const issue = await octokit.rest.issues.get({ owner, repo: child.repository.name, issue_number: child.number });
 
-                    debug(inspect(issue.data));
+            info(inspect(epic.childIssues.nodes));
 
-                    if (issue.data.state !== 'closed')
-                        allChildIsClosed = false;
-                });
+            if (epic.childIssues.nodes.some(child => child.state.toLowerCase() !== 'closed'))
+                allChildIsClosed = false;
             
             if (allChildIsClosed) {
                 debug(`epic ${epic.issue.repository.name}#${epic.issue.number} is closing`);
