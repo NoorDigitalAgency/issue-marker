@@ -10,7 +10,7 @@ async function run(): Promise<void> {
 
     const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
 
-    const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/;
+    const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}(?:\.\d{1,3})?$/;
 
     const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
 

@@ -300,7 +300,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const productionRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}$/;
-            const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}$/;
+            const betaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-beta\.\d{1,3}(?:\.\d{1,3})?$/;
             const alphaRegex = /^v20[2-3]\d(?:\.\d{1,3}){1,2}-alpha\.\d{1,3}$/;
             const version = (0, core_1.getInput)('version', { required: true });
             (0, core_1.debug)(`Version: '${version}'.`);
